@@ -36,13 +36,15 @@ export function ScheduleCourseBlock({
 
   return (
     <div
-      className={`min-w-0 rounded border p-1.5 text-[10.5px] leading-snug ${conflictClass} ${
+      className={`min-w-0 overflow-hidden rounded border p-1.5 text-[10.5px] leading-snug ${conflictClass} ${
         status === "planned" ? "opacity-90" : ""
       }`}
       title={`${snapshot.courseName} (${entry.courseCode})\n${teachers}\n${classroom ?? ""}`}
     >
       <div className="flex items-baseline justify-between gap-1">
-        <span className="truncate font-medium">{snapshot.courseName}</span>
+        <span className="line-clamp-2 break-words font-medium">
+          {snapshot.courseName}
+        </span>
         {status === "confirmed" && (
           <span className="shrink-0 rounded bg-[color:var(--color-accent)]/30 px-1 text-[9px] uppercase tracking-wider text-[color:var(--color-accent)]">
             已確認

@@ -15,6 +15,9 @@ OPENDATA_LIST_URL = BASE + "/opendatadownload/list/{year}/{sem}/"
 DEPT_LIST_URL = BASE + "/view-dept/{year}/{sem}/{dept}/"
 COURSE_DETAIL_URL = BASE + "/view/{year}/{sem}/{code}"
 
+# Bumping this string forces re-processing of cached HTML on next run.
+DETAIL_PARSER_VERSION = "detail_parser_v1"
+
 # Scraping etiquette ---------------------------------------------------------
 USER_AGENT = (
     "CCSP-Web/0.1 (+https://github.com/AnsonHui6040/CCSP-Web; "

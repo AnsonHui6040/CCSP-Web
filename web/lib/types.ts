@@ -66,6 +66,44 @@ export type Term = {
   semester: 1 | 2;
 };
 
+/** One row in the 評分方式 table. */
+export type GradingPolicyEntry = {
+  item: string | null;
+  percent: number | null;
+  note: string | null;
+};
+
+/** Per-course detail page data. All fields can be null when missing. */
+export type CourseDetail = {
+  detailUrl: string | null;
+  courseDescription: string | null;
+  teachingGoal: string | null;
+  gradingPolicy: GradingPolicyEntry[];
+  textbook: string | null;
+  referenceBooks: string | null;
+  officeHour: string | null;
+  syllabusUrl: string | null;
+  detailedNote: string | null;
+  teachers: Teacher[];
+  teachingAssistants: { name: string }[];
+  rawSections: Record<string, string>;
+  fetchStatus:
+    | "success"
+    | "skipped"
+    | "parse_error"
+    | "http_error"
+    | "not_found"
+    | null;
+  fetchedAt: string | null;
+  parserVersion: string | null;
+  errorMessage: string | null;
+};
+
+export type CourseWithDetails = {
+  course: Course;
+  detail: CourseDetail | null;
+};
+
 /** Search-form state, lifted into the URL so results are shareable. */
 export type CourseSearchParams = {
   q?: string; // free text against name / code / teacher

@@ -1,19 +1,19 @@
 "use client";
 
-import type { Conflict } from "@/lib/conflict";
+import type { Conflict, CourseLike } from "@/lib/conflict";
 import type { ScheduleMode, StoredScheduleCourse } from "@/lib/scheduleStore";
-import { keyMatches } from "@/lib/courseSnapshot";
 import { comparePeriod } from "@/lib/scheduleStats";
 
 type Props = {
   conflicts: Conflict[];
-  courses: StoredScheduleCourse[];
+  /** Reference map for matching CourseLike → persisted entry. */
+  linkBack: WeakMap<CourseLike, StoredScheduleCourse>;
   mode: ScheduleMode;
 };
 
 const WEEKDAY_LABELS = ["", "一", "二", "三", "四", "五", "六", "日"];
 
-export function ConflictList({ conflicts, courses, mode }: Props) {
+export function ConflictList({ conflicts, linkBack, mode }: Props) {
   if (conflicts.length === 0) {
     return (
       <p className="rounded border border-dashed border-[color:var(--color-border)] p-3 text-xs text-[color:var(--color-text-dim)]">
@@ -22,14 +22,12 @@ export function ConflictList({ conflicts, courses, mode }: Props) {
     );
   }
 
-  // Merge entries that share the same (a, b) pair across multiple cells.
-  const merged = mergeByPair(conflicts);
-
   return (
     <ul className="space-y-2 text-xs">
-      {merged.map((m, i) => {
-        const a = findEntry(courses, m.a);
-        const b = findEntry(courses, m.b);
+      {conflicts.map((c, i) => {
+        const a = linkBack.get(c.a);
+        const b = linkBack.get(c.b);
+        if (!a || !b) return null; // shouldn't happen
         return (
           <li
             key={i}
@@ -40,17 +38,17 @@ export function ConflictList({ conflicts, courses, mode }: Props) {
             }`}
           >
             <div className="font-medium">
-              <span>{m.a.snapshot.courseName}</span>
+              <span className="break-words">{a.snapshot.courseName}</span>
               <span className="mx-1 text-[color:var(--color-text-dim)]">×</span>
-              <span>{m.b.snapshot.courseName}</span>
+              <span className="break-words">{b.snapshot.courseName}</span>
             </div>
             <div className="mt-1 text-[color:var(--color-text-dim)]">
-              {summariseCells(m.cells)}
+              {summariseCells(c.overlaps)}
             </div>
             <div className="mt-0.5 text-[10px] text-[color:var(--color-text-dim)]">
-              {a?.courseCode} {classroomFor(a, m.cells[0])}
+              {a.courseCode} {classroomFor(a, c.overlaps[0])}
               {" · "}
-              {b?.courseCode} {classroomFor(b, m.cells[0])}
+              {b.courseCode} {classroomFor(b, c.overlaps[0])}
             </div>
           </li>
         );
@@ -62,41 +60,10 @@ export function ConflictList({ conflicts, courses, mode }: Props) {
 // ---------------------------------------------------------------------------
 // helpers
 
-type Merged = {
-  a: StoredScheduleCourse;
-  b: StoredScheduleCourse;
-  cells: Array<{ weekday: number; period: string }>;
-};
-
-function mergeByPair(conflicts: Conflict[]): Merged[] {
-  const out: Merged[] = [];
-  for (const c of conflicts) {
-    out.push({
-      a: c.a as unknown as StoredScheduleCourse,
-      b: c.b as unknown as StoredScheduleCourse,
-      cells: c.overlaps,
-    });
-  }
-  return out;
-}
-
-function findEntry(
-  courses: StoredScheduleCourse[],
-  like: { courseCode: string; year?: number; semester?: number },
-): StoredScheduleCourse | undefined {
-  return courses.find(
-    (c) =>
-      c.courseCode === like.courseCode &&
-      (like.year === undefined || c.year === like.year) &&
-      (like.semester === undefined || c.semester === like.semester),
-  );
-}
-
 function classroomFor(
-  entry: StoredScheduleCourse | undefined,
+  entry: StoredScheduleCourse,
   cell: { weekday: number; period: string },
 ): string {
-  if (!entry) return "";
   const slot = entry.snapshot.timeSlots.find(
     (s) =>
       Number(s.weekday) === cell.weekday &&
@@ -123,7 +90,3 @@ function summariseCells(cells: Array<{ weekday: number; period: string }>): stri
     })
     .join("；");
 }
-
-// keyMatches re-export referenced indirectly above via type only; silence
-// unused-import lint on stripped builds by referencing it once.
-void keyMatches;

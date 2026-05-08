@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Course } from "@/lib/types";
 import {
   formatCredits,
@@ -99,6 +100,15 @@ export function CourseCard({ course }: Props) {
           {course.rawNote}
         </p>
       )}
+
+      <div className="mt-3 text-right">
+        <Link
+          href={`/courses/${course.year}/${course.semester}/${course.courseCode}`}
+          className="text-xs text-[color:var(--color-text-dim)] hover:text-[color:var(--color-accent)]"
+        >
+          查看詳情 →
+        </Link>
+      </div>
     </article>
   );
 }

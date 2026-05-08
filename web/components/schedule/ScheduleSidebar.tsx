@@ -11,7 +11,7 @@ import {
   type ScheduleMode,
   type StoredScheduleCourse,
 } from "@/lib/scheduleStore";
-import type { Conflict } from "@/lib/conflict";
+import type { Conflict, CourseLike } from "@/lib/conflict";
 import type { ScheduleStats } from "@/lib/scheduleStats";
 import { useCandidatePool } from "@/components/candidatePoolStore";
 import { ConflictList } from "./ConflictList";
@@ -21,6 +21,7 @@ import { ScheduleStatsPanel } from "./ScheduleStatsPanel";
 type Props = {
   courses: StoredScheduleCourse[];
   conflicts: Conflict[];
+  linkBack: WeakMap<CourseLike, StoredScheduleCourse>;
   stats: ScheduleStats;
   mode: ScheduleMode;
 };
@@ -63,7 +64,7 @@ export function ScheduleSidebar(props: Props) {
       {tab === "conflicts" && (
         <ConflictList
           conflicts={props.conflicts}
-          courses={props.courses}
+          linkBack={props.linkBack}
           mode={props.mode}
         />
       )}

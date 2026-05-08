@@ -4,7 +4,10 @@ import { getDb } from "./db";
 import type { TagKey, TagLevel } from "./tags";
 import type {
   Course,
+  CourseDetail,
   CourseSearchParams,
+  CourseWithDetails,
+  GradingPolicyEntry,
   Rule,
   Teacher,
   Term,
@@ -228,4 +231,103 @@ export function getCourseByCode(
     | Record<string, unknown>
     | undefined;
   return row ? rowToCourse(row) : null;
+}
+
+// ---------------------------------------------------------------------------
+// course_details — Phase 4
+
+const DETAIL_COLUMNS = [
+  "detail_url",
+  "course_description",
+  "teaching_goal",
+  "grading_policy_json",
+  "textbook",
+  "reference_books",
+  "office_hour",
+  "syllabus_url",
+  "detailed_note",
+  "teachers_json",
+  "teaching_assistants_json",
+  "raw_sections_json",
+  "fetched_at",
+  "parser_version",
+  "fetch_status",
+  "error_message",
+].join(", ");
+
+function rowToDetail(row: Record<string, unknown> | undefined): CourseDetail | null {
+  if (!row) return null;
+  const status = (row.fetch_status as string | null) ?? null;
+  return {
+    detailUrl: (row.detail_url as string | null) ?? null,
+    courseDescription: (row.course_description as string | null) ?? null,
+    teachingGoal: (row.teaching_goal as string | null) ?? null,
+    gradingPolicy: safeParseArray<GradingPolicyEntry>(row.grading_policy_json),
+    textbook: (row.textbook as string | null) ?? null,
+    referenceBooks: (row.reference_books as string | null) ?? null,
+    officeHour: (row.office_hour as string | null) ?? null,
+    syllabusUrl: (row.syllabus_url as string | null) ?? null,
+    detailedNote: (row.detailed_note as string | null) ?? null,
+    teachers: safeParseArray<Teacher>(row.teachers_json),
+    teachingAssistants: safeParseArray<{ name: string }>(
+      row.teaching_assistants_json,
+    ),
+    rawSections: safeParseObject(row.raw_sections_json),
+    fetchStatus: isKnownStatus(status) ? status : null,
+    fetchedAt: (row.fetched_at as string | null) ?? null,
+    parserVersion: (row.parser_version as string | null) ?? null,
+    errorMessage: (row.error_message as string | null) ?? null,
+  };
+}
+
+function isKnownStatus(s: string | null): s is CourseDetail["fetchStatus"] {
+  return (
+    s === "success" ||
+    s === "skipped" ||
+    s === "parse_error" ||
+    s === "http_error" ||
+    s === "not_found"
+  );
+}
+
+function safeParseObject(json: unknown): Record<string, string> {
+  if (typeof json !== "string" || !json) return {};
+  try {
+    const parsed = JSON.parse(json);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, string>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Fetch one course's basic data + (optionally) its detail row.
+ * Detail join is left-outer: a course may exist without a detail row.
+ * Returns null only when the course itself isn't in the database.
+ */
+export function getCourseWithDetails(
+  term: Term,
+  courseCode: string,
+): CourseWithDetails | null {
+  const course = getCourseByCode(term, courseCode);
+  if (!course) return null;
+  const db = getDb();
+  try {
+    const row = db
+      .prepare(
+        `SELECT ${DETAIL_COLUMNS} FROM course_details
+          WHERE year = ? AND semester = ? AND course_code = ?`,
+      )
+      .get(term.year, term.semester, courseCode) as
+      | Record<string, unknown>
+      | undefined;
+    return { course, detail: rowToDetail(row) };
+  } catch {
+    // course_details table may not exist yet (older DB without the
+    // Phase-4 migration). Don't crash — show the basic course card.
+    return { course, detail: null };
+  }
 }

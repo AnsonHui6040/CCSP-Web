@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { findCourseConflicts } from "./conflict";
+import { findCourseConflicts, type CourseLike } from "./conflict";
 import { keyMatches, snapshotFromCourse, snapshotKey } from "./courseSnapshot";
 import type { Course, StoredCourseSnapshot } from "./types";
 
@@ -188,14 +188,21 @@ export function confirmCourse(k: Key): ConfirmResult {
     const otherConfirmed = state.courses.filter(
       (c) => c.status === "confirmed" && !keyMatches(c, k),
     );
+    // Reference-link CourseLike adapters back to their entries so the
+    // result is correct even if two confirmed courses happened to share
+    // a courseCode (e.g., across terms — currently rare but possible).
+    const link = new WeakMap<CourseLike, StoredScheduleCourse>();
+    const otherLikes: CourseLike[] = otherConfirmed.map((entry) => {
+      const like: CourseLike = scheduleEntryToCourseLike(entry);
+      link.set(like, entry);
+      return like;
+    });
     const targetLike = scheduleEntryToCourseLike(target);
-    const conflictLikes = otherConfirmed.map(scheduleEntryToCourseLike);
-    const clashLikes = findCourseConflicts(targetLike, conflictLikes);
+    const clashLikes = findCourseConflicts(targetLike, otherLikes);
     if (clashLikes.length > 0) {
-      const clashCodes = new Set(clashLikes.map((c) => c.courseCode));
-      const conflictsWith = otherConfirmed.filter((c) =>
-        clashCodes.has(c.courseCode),
-      );
+      const conflictsWith = clashLikes
+        .map((l) => link.get(l))
+        .filter((e): e is StoredScheduleCourse => Boolean(e));
       return { ok: false, reason: "conflict", conflictsWith };
     }
   }
@@ -231,6 +238,11 @@ export function setScheduleMode(mode: ScheduleMode): void {
 
 export function clearSchedule(): void {
   writeState({ ...EMPTY_STATE });
+}
+
+/** @internal — test-only. */
+export function __resetScheduleCacheForTests(): void {
+  cache = null;
 }
 
 // ---------------------------------------------------------------------------

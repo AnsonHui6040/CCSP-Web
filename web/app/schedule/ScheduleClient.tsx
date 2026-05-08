@@ -1,9 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import { findAllConflicts, getOccupiedSlots } from "@/lib/conflict";
+import {
+  findAllConflicts,
+  getOccupiedSlots,
+  type CourseLike,
+} from "@/lib/conflict";
 import { computeStats } from "@/lib/scheduleStats";
-import { useSchedule } from "@/lib/scheduleStore";
+import { useSchedule, type StoredScheduleCourse } from "@/lib/scheduleStore";
 import { ScheduleSidebar } from "@/components/schedule/ScheduleSidebar";
 import { ScheduleToolbar } from "@/components/schedule/ScheduleToolbar";
 import { WeeklyGrid } from "@/components/schedule/WeeklyGrid";
@@ -11,21 +15,24 @@ import { WeeklyGrid } from "@/components/schedule/WeeklyGrid";
 export function ScheduleClient() {
   const { courses, mode, hydrated } = useSchedule();
 
-  // Adapt the persisted entries to the structural CourseLike shape that
-  // conflict.ts expects.
-  const courseLikes = useMemo(
-    () =>
-      courses.map((c) => ({
+  // Build CourseLike adapters for the conflict layer + a WeakMap that
+  // round-trips back to the rich StoredScheduleCourse. Reference-based
+  // matching is safer than (year, sem, courseCode) string keys: it
+  // works for any future identity shape without risk of collision.
+  const { courseLikes, linkBack } = useMemo(() => {
+    const link = new WeakMap<CourseLike, StoredScheduleCourse>();
+    const likes = courses.map((c) => {
+      const like: CourseLike = {
         courseCode: c.courseCode,
         courseName: c.snapshot.courseName,
         credits: c.snapshot.credits ?? undefined,
         timeSlots: c.snapshot.timeSlots,
-        // Deliberately NOT setting `id` — the schedule entries don't have
-        // a numeric id; identity inside conflict.ts falls back to
-        // reference equality, which matches our use here.
-      })),
-    [courses],
-  );
+      };
+      link.set(like, c);
+      return like;
+    });
+    return { courseLikes: likes, linkBack: link };
+  }, [courses]);
 
   const conflicts = useMemo(() => findAllConflicts(courseLikes), [courseLikes]);
   const occupied = useMemo(() => getOccupiedSlots(courseLikes), [courseLikes]);
@@ -39,24 +46,6 @@ export function ScheduleClient() {
     }
     return set;
   }, [conflicts]);
-
-  // Re-key conflicts back to the persisted entries so downstream UI gets
-  // the rich `StoredScheduleCourse` (with status / snapshot).
-  const conflictsForUi = useMemo(() => {
-    return conflicts.map((c) => {
-      const a = courses.find((e) => e.courseCode === c.a.courseCode)!;
-      const b = courses.find((e) => e.courseCode === c.b.courseCode)!;
-      return {
-        a: { ...c.a, snapshot: a.snapshot } as unknown as typeof c.a & {
-          snapshot: typeof a.snapshot;
-        },
-        b: { ...c.b, snapshot: b.snapshot } as unknown as typeof c.b & {
-          snapshot: typeof b.snapshot;
-        },
-        overlaps: c.overlaps,
-      };
-    });
-  }, [conflicts, courses]);
 
   const stats = useMemo(
     () =>
@@ -87,14 +76,15 @@ export function ScheduleClient() {
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <WeeklyGrid
-          courses={courses}
           occupied={occupied}
+          linkBack={linkBack}
           conflictKeys={conflictKeys}
           mode={mode}
         />
         <ScheduleSidebar
           courses={courses}
-          conflicts={conflictsForUi as unknown as typeof conflicts}
+          conflicts={conflicts}
+          linkBack={linkBack}
           stats={stats}
           mode={mode}
         />

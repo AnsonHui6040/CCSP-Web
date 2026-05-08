@@ -1,6 +1,6 @@
 "use client";
 
-import type { OccupiedSlot } from "@/lib/conflict";
+import type { CourseLike, OccupiedSlot } from "@/lib/conflict";
 import { PERIOD_ORDER } from "@/lib/scheduleStats";
 import type {
   ScheduleMode,
@@ -9,8 +9,9 @@ import type {
 import { ScheduleCourseBlock } from "./ScheduleCourseBlock";
 
 type Props = {
-  courses: StoredScheduleCourse[];
   occupied: OccupiedSlot[];
+  /** Reference map built by ScheduleClient — preserves identity across terms. */
+  linkBack: WeakMap<CourseLike, StoredScheduleCourse>;
   conflictKeys: ReadonlySet<string>;
   mode: ScheduleMode;
 };
@@ -32,14 +33,9 @@ const WEEKDAYS = [
  */
 const DIVIDER_AFTER: ReadonlySet<string> = new Set(["4", "8", "13"]);
 
-export function WeeklyGrid({ courses, occupied, conflictKeys, mode }: Props) {
-  // Build a courseCode-keyed index of the persisted entries. Schedule is
-  // single-term in practice, so courseCode alone disambiguates.
-  const byCode = new Map<string, StoredScheduleCourse>();
-  for (const c of courses) byCode.set(c.courseCode, c);
-
-  // Build a lookup: cell-key → list of (entry, classroom) pairs from the
-  // OccupiedSlot output so we don't recompute conflict math here.
+export function WeeklyGrid({ occupied, linkBack, conflictKeys, mode }: Props) {
+  // Cell-key → list of (entry, classroom) pairs. Reference-matching via
+  // linkBack means same courseCode in different terms stays distinct.
   const cellMap = new Map<
     string,
     Array<{ entry: StoredScheduleCourse; classroom: string | null }>
@@ -51,7 +47,7 @@ export function WeeklyGrid({ courses, occupied, conflictKeys, mode }: Props) {
       classroom: string | null;
     }> = [];
     for (const c of slot.courses) {
-      const entry = byCode.get(c.courseCode);
+      const entry = linkBack.get(c);
       if (entry) {
         list.push({ entry, classroom: slot.classroomByCourse.get(c) ?? null });
       }
@@ -61,9 +57,9 @@ export function WeeklyGrid({ courses, occupied, conflictKeys, mode }: Props) {
 
   return (
     <div className="overflow-x-auto rounded-lg border bg-[color:var(--color-surface)]">
-      <table className="w-full table-fixed border-collapse text-xs">
+      <table className="w-full min-w-[640px] table-fixed border-collapse text-xs">
         <colgroup>
-          <col className="w-12" />
+          <col className="w-10" />
           {WEEKDAYS.map((d) => (
             <col key={d.value} />
           ))}

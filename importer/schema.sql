@@ -77,3 +77,51 @@ CREATE TABLE IF NOT EXISTS meta (
   key   TEXT PRIMARY KEY,
   value TEXT
 );
+
+-- ----------------------------------------------------------------------
+-- Phase 4: per-course detail page (course.thu.edu.tw/view/{y}/{s}/{code})
+--
+-- Kept in its own table so the courses row stays narrow and so a parser
+-- bump can re-process from raw_sections_json without touching the main
+-- table.
+CREATE TABLE IF NOT EXISTS course_details (
+  year                     INTEGER NOT NULL,
+  semester                 INTEGER NOT NULL,
+  course_code              TEXT    NOT NULL,
+
+  detail_url               TEXT,                  -- absolute URL
+  course_description       TEXT,                  -- 課程概述
+  teaching_goal            TEXT,                  -- 教育目標
+  grading_policy_json      TEXT,                  -- JSON: [{item,percent,note}]
+  textbook                 TEXT,                  -- 教材 (rare; usually null)
+  reference_books          TEXT,                  -- 參考書目
+  office_hour              TEXT,                  -- Office Hour 文字段
+  syllabus_url             TEXT,                  -- 授課大綱 link (absolute)
+  detailed_note            TEXT,                  -- 選課備註 (more verbose than dept page)
+  teachers_json            TEXT,                  -- JSON: [{name,slug}]
+  teaching_assistants_json TEXT,                  -- JSON: [{name}]
+  raw_sections_json        TEXT,                  -- JSON: {section_name: text}
+
+  fetched_at               TEXT NOT NULL,         -- ISO8601 UTC
+  parser_version           TEXT,                  -- e.g. "detail_parser_v1"
+  fetch_status             TEXT NOT NULL,         -- success/skipped/parse_error/http_error/not_found
+  error_message            TEXT,
+
+  PRIMARY KEY (year, semester, course_code)
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_details_status   ON course_details (fetch_status);
+CREATE INDEX IF NOT EXISTS idx_course_details_term     ON course_details (year, semester);
+
+CREATE TABLE IF NOT EXISTS detail_scrape_runs (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  year          INTEGER NOT NULL,
+  semester      INTEGER NOT NULL,
+  course_code   TEXT    NOT NULL,
+  http_status   INTEGER,
+  fetch_status  TEXT,
+  error_message TEXT,
+  scraped_at    TEXT    NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_detail_runs_term ON detail_scrape_runs (year, semester, course_code);
