@@ -1,18 +1,14 @@
 "use client";
 
-import type { CourseLike, OccupiedSlot } from "@/lib/conflict";
+import { Fragment } from "react";
 import { PERIOD_ORDER } from "@/lib/scheduleStats";
-import type {
-  ScheduleMode,
-  StoredScheduleCourse,
-} from "@/lib/scheduleStore";
+import type { ScheduleDisplayBlock } from "@/lib/scheduleLayout";
+import type { ScheduleMode } from "@/lib/scheduleStore";
 import { ScheduleCourseBlock } from "./ScheduleCourseBlock";
 
 type Props = {
-  occupied: OccupiedSlot[];
-  /** Reference map built by ScheduleClient — preserves identity across terms. */
-  linkBack: WeakMap<CourseLike, StoredScheduleCourse>;
-  conflictKeys: ReadonlySet<string>;
+  blocks: ScheduleDisplayBlock[];
+  conflictKeys: ReadonlySet<string>; // "weekday-period" — drives cell tint
   mode: ScheduleMode;
 };
 
@@ -26,116 +22,172 @@ const WEEKDAYS = [
   { value: 7, label: "日" },
 ];
 
+/** Periods after which we draw a thicker divider (morning/afternoon/evening/special). */
+const DIVIDER_PERIODS: ReadonlySet<string> = new Set(["4", "8", "13"]);
+
 /**
- * Indices in PERIOD_ORDER where a horizontal divider visually separates
- * morning (1-4), afternoon (5-8), evening (9-13), and special (A,B).
- * Spec §2 — same single grid, just visual separators.
+ * 7×15 weekly grid using CSS Grid so that multi-period courses can be
+ * rendered as a single row-spanning rectangle (replaces the V1 "draw
+ * the same block in every cell" approach).
+ *
+ * Layout:
+ *   col 1            row 1            "節"      header corner
+ *   col 1            row 2..16        period number labels
+ *   col 2..8         row 1            day labels
+ *   col 2..8         row 2..16        skeleton cells (borders + conflict tint)
+ *   ↑ blocks placed via gridColumn / gridRow span
  */
-const DIVIDER_AFTER: ReadonlySet<string> = new Set(["4", "8", "13"]);
-
-export function WeeklyGrid({ occupied, linkBack, conflictKeys, mode }: Props) {
-  // Cell-key → list of (entry, classroom) pairs. Reference-matching via
-  // linkBack means same courseCode in different terms stays distinct.
-  const cellMap = new Map<
-    string,
-    Array<{ entry: StoredScheduleCourse; classroom: string | null }>
-  >();
-  for (const slot of occupied) {
-    const key = cellKey(slot.weekday, slot.period);
-    const list: Array<{
-      entry: StoredScheduleCourse;
-      classroom: string | null;
-    }> = [];
-    for (const c of slot.courses) {
-      const entry = linkBack.get(c);
-      if (entry) {
-        list.push({ entry, classroom: slot.classroomByCourse.get(c) ?? null });
-      }
-    }
-    cellMap.set(key, list);
-  }
-
+export function WeeklyGrid({ blocks, conflictKeys, mode }: Props) {
   return (
     <div className="overflow-x-auto rounded-lg border bg-[color:var(--color-surface)]">
-      <table className="w-full min-w-[640px] table-fixed border-collapse text-xs">
-        <colgroup>
-          <col className="w-10" />
-          {WEEKDAYS.map((d) => (
-            <col key={d.value} />
-          ))}
-        </colgroup>
-        <thead>
-          <tr className="border-b">
-            <th className="bg-[color:var(--color-surface-2)] p-1.5 text-[color:var(--color-text-dim)]">
-              節
-            </th>
-            {WEEKDAYS.map((d) => (
-              <th
-                key={d.value}
-                className="bg-[color:var(--color-surface-2)] p-1.5 font-medium"
-              >
-                {d.label}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {PERIOD_ORDER.map((period) => {
-            const isDivider = DIVIDER_AFTER.has(period);
-            return (
-              <tr
-                key={period}
-                className={
-                  isDivider
-                    ? "border-b-2 border-[color:var(--color-border)]"
-                    : "border-b border-[color:var(--color-border)]/60"
-                }
-              >
-                <td className="bg-[color:var(--color-surface-2)] p-1 text-center align-top font-mono text-[color:var(--color-text-dim)]">
-                  {period}
-                </td>
-                {WEEKDAYS.map((d) => {
-                  const key = cellKey(d.value, period);
-                  const occupants = cellMap.get(key) ?? [];
-                  const hasConflict = conflictKeys.has(key);
-                  return (
-                    <td
-                      key={d.value}
-                      className={`align-top p-0.5 ${
-                        hasConflict
-                          ? mode === "official"
-                            ? "bg-[color:var(--color-danger)]/5"
-                            : "bg-[color:var(--color-warn)]/5"
-                          : ""
-                      }`}
-                    >
-                      {occupants.length > 0 && (
-                        <div className="flex flex-col gap-0.5">
-                          {occupants.map(({ entry, classroom }) => (
-                            <ScheduleCourseBlock
-                              key={`${entry.year}-${entry.semester}-${entry.courseCode}`}
-                              entry={entry}
-                              classroom={classroom}
-                              isConflicting={
-                                hasConflict && occupants.length > 1
-                              }
-                              mode={mode}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </td>
-                  );
-                })}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div
+        className="grid min-w-[640px]"
+        style={{
+          gridTemplateColumns: "3rem repeat(7, minmax(0, 1fr))",
+          gridTemplateRows: `auto repeat(${PERIOD_ORDER.length}, minmax(3.25rem, auto))`,
+        }}
+      >
+        {/* Header row */}
+        <HeaderCell row={1} col={1}>
+          節
+        </HeaderCell>
+        {WEEKDAYS.map((d, i) => (
+          <HeaderCell key={d.value} row={1} col={i + 2}>
+            {d.label}
+          </HeaderCell>
+        ))}
+
+        {/* Period skeleton */}
+        {PERIOD_ORDER.map((period, pi) => {
+          const row = pi + 2;
+          const isDivider = DIVIDER_PERIODS.has(period);
+          return (
+            <Fragment key={period}>
+              <PeriodLabel row={row} col={1} divider={isDivider}>
+                {period}
+              </PeriodLabel>
+              {WEEKDAYS.map((d, di) => {
+                const cellId = `${d.value}-${period}`;
+                const inConflict = conflictKeys.has(cellId);
+                return (
+                  <SkeletonCell
+                    key={d.value}
+                    row={row}
+                    col={di + 2}
+                    divider={isDivider}
+                    conflictTint={
+                      inConflict
+                        ? mode === "official"
+                          ? "danger"
+                          : "warn"
+                        : null
+                    }
+                  />
+                );
+              })}
+            </Fragment>
+          );
+        })}
+
+        {/* Course blocks: each grid-cell wrapper handles row-span placement;
+            the inner block uses absolute positioning to support side-by-
+            side rendering when `overlapCount > 1`. */}
+        {blocks.map((b) => {
+          const startIdx = PERIOD_ORDER.indexOf(
+            b.startPeriod as (typeof PERIOD_ORDER)[number],
+          );
+          if (startIdx < 0) return null;
+          return (
+            <div
+              key={b.blockKey}
+              style={{
+                gridColumn: b.weekday + 1,
+                gridRow: `${startIdx + 2} / span ${b.periodSpan}`,
+                position: "relative",
+                zIndex: 10,
+              }}
+            >
+              <ScheduleCourseBlock block={b} mode={mode} />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function cellKey(weekday: number, period: string): string {
-  return `${weekday}-${period}`;
+// ---------------------------------------------------------------------------
+// Skeleton cells
+
+function HeaderCell({
+  row,
+  col,
+  children,
+}: {
+  row: number;
+  col: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{ gridRow: row, gridColumn: col }}
+      className="border-b border-r border-[color:var(--color-border)] bg-[color:var(--color-surface-2)] p-1.5 text-center text-xs font-medium"
+    >
+      {children}
+    </div>
+  );
+}
+
+function PeriodLabel({
+  row,
+  col,
+  divider,
+  children,
+}: {
+  row: number;
+  col: number;
+  divider: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{ gridRow: row, gridColumn: col }}
+      className={`border-r bg-[color:var(--color-surface-2)] p-1 text-center font-mono text-[11px] text-[color:var(--color-text-dim)] ${
+        divider
+          ? "border-b-2 border-b-[color:var(--color-border)]"
+          : "border-b border-b-[color:var(--color-border)]/60"
+      }`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function SkeletonCell({
+  row,
+  col,
+  divider,
+  conflictTint,
+}: {
+  row: number;
+  col: number;
+  divider: boolean;
+  conflictTint: "warn" | "danger" | null;
+}) {
+  const tintClass =
+    conflictTint === "danger"
+      ? "bg-[color:var(--color-danger)]/5"
+      : conflictTint === "warn"
+        ? "bg-[color:var(--color-warn)]/5"
+        : "";
+  return (
+    <div
+      style={{ gridRow: row, gridColumn: col }}
+      className={`border-r border-[color:var(--color-border)]/40 ${
+        divider
+          ? "border-b-2 border-b-[color:var(--color-border)]"
+          : "border-b border-b-[color:var(--color-border)]/40"
+      } ${tintClass}`}
+    />
+  );
 }

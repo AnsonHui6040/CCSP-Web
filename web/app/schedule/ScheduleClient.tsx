@@ -1,11 +1,8 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  findAllConflicts,
-  getOccupiedSlots,
-  type CourseLike,
-} from "@/lib/conflict";
+import { findAllConflicts, type CourseLike } from "@/lib/conflict";
+import { buildScheduleLayoutBlocks } from "@/lib/scheduleLayout";
 import { computeStats } from "@/lib/scheduleStats";
 import { useSchedule, type StoredScheduleCourse } from "@/lib/scheduleStore";
 import { ScheduleSidebar } from "@/components/schedule/ScheduleSidebar";
@@ -15,10 +12,8 @@ import { WeeklyGrid } from "@/components/schedule/WeeklyGrid";
 export function ScheduleClient() {
   const { courses, mode, hydrated } = useSchedule();
 
-  // Build CourseLike adapters for the conflict layer + a WeakMap that
-  // round-trips back to the rich StoredScheduleCourse. Reference-based
-  // matching is safer than (year, sem, courseCode) string keys: it
-  // works for any future identity shape without risk of collision.
+  // Reference-link CourseLike adapters back to their persisted entry so
+  // ConflictList can show rich info; conflict.ts compares by reference.
   const { courseLikes, linkBack } = useMemo(() => {
     const link = new WeakMap<CourseLike, StoredScheduleCourse>();
     const likes = courses.map((c) => {
@@ -35,17 +30,22 @@ export function ScheduleClient() {
   }, [courses]);
 
   const conflicts = useMemo(() => findAllConflicts(courseLikes), [courseLikes]);
-  const occupied = useMemo(() => getOccupiedSlots(courseLikes), [courseLikes]);
 
+  // Cell-level conflict highlight set, e.g. "2-4". Drives the grid's
+  // background tint independently of any individual block.
   const conflictKeys = useMemo(() => {
     const set = new Set<string>();
     for (const c of conflicts) {
-      for (const cell of c.overlaps) {
-        set.add(`${cell.weekday}-${cell.period}`);
-      }
+      for (const cell of c.overlaps) set.add(`${cell.weekday}-${cell.period}`);
     }
     return set;
   }, [conflicts]);
+
+  // The display layout — already merged into row-spanning blocks.
+  const blocks = useMemo(
+    () => buildScheduleLayoutBlocks(courses, conflicts, mode),
+    [courses, conflicts, mode],
+  );
 
   const stats = useMemo(
     () =>
@@ -75,12 +75,7 @@ export function ScheduleClient() {
         conflictPairs={conflicts.length}
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <WeeklyGrid
-          occupied={occupied}
-          linkBack={linkBack}
-          conflictKeys={conflictKeys}
-          mode={mode}
-        />
+        <WeeklyGrid blocks={blocks} conflictKeys={conflictKeys} mode={mode} />
         <ScheduleSidebar
           courses={courses}
           conflicts={conflicts}
