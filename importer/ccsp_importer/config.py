@@ -1,12 +1,19 @@
 """Project-wide constants for the importer."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # Repo paths -----------------------------------------------------------------
 REPO_ROOT = Path(__file__).resolve().parents[2]
-DATA_DIR = REPO_ROOT / "data"
-DB_PATH = DATA_DIR / "ccsp.sqlite"
+
+# Allow the data directory to be overridden at runtime (e.g. Fly.io volume).
+# CCSP_DATA_DIR takes priority; falls back to <repo>/data.
+DATA_DIR = Path(os.environ.get("CCSP_DATA_DIR", REPO_ROOT / "data"))
+
+# DATABASE_PATH overrides the default <DATA_DIR>/ccsp.sqlite.
+DB_PATH = Path(os.environ.get("DATABASE_PATH", DATA_DIR / "ccsp.sqlite"))
+
 SCHEMA_PATH = REPO_ROOT / "importer" / "schema.sql"
 
 # THU endpoints --------------------------------------------------------------

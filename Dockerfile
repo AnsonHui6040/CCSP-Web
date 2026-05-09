@@ -66,6 +66,10 @@ COPY --from=python-deps /app/importer/.venv /app/importer/.venv
 # Importer source (needed at runtime by the venv)
 COPY importer/ /app/importer/
 
+# Maintenance scripts (update_courses.sh etc.)
+COPY scripts/ /app/scripts/
+RUN chmod +x /app/scripts/*.sh
+
 # Next.js standalone output + static assets
 COPY --from=builder /app/web/.next/standalone ./web/
 COPY --from=builder /app/web/.next/static     ./web/.next/static
