@@ -64,8 +64,13 @@ function subscribe(l: Listener) {
 function getSnapshot() {
   return readStorage();
 }
+
+// Stable empty map for SSR — must be the same reference on every call to
+// avoid triggering React's "getServerSnapshot should be cached" invariant.
+const EMPTY_MAP = new Map<string, CandidateEntry>();
+
 function getServerSnapshot() {
-  return new Map<string, CandidateEntry>();
+  return EMPTY_MAP;
 }
 
 // ---------------------------------------------------------------------------

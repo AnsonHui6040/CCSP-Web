@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { TAG_DEFS_BY_KEY, sortTagKeys } from "@/lib/tags";
 import type { StoredScheduleCourse } from "@/lib/scheduleStore";
+import { courseDetailHref } from "@/lib/courseLinks";
 
 type Props = {
   courses: StoredScheduleCourse[];
@@ -65,6 +67,14 @@ export function NoTimeCourseList({ courses }: Props) {
                 {entry.snapshot.rawNote}
               </p>
             )}
+            <div className="mt-1.5">
+              <Link
+                href={courseDetailHref(entry)}
+                className="text-[10px] text-[color:var(--color-text-dim)] hover:text-[color:var(--color-accent)] hover:underline"
+              >
+                詳細資料
+              </Link>
+            </div>
           </li>
         );
       })}

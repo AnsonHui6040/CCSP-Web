@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import type { Conflict, CourseLike } from "@/lib/conflict";
 import type { ScheduleMode, StoredScheduleCourse } from "@/lib/scheduleStore";
 import { comparePeriod } from "@/lib/scheduleStats";
+import { courseDetailHref } from "@/lib/courseLinks";
 
 type Props = {
   conflicts: Conflict[];
@@ -49,6 +51,20 @@ export function ConflictList({ conflicts, linkBack, mode }: Props) {
               {a.courseCode} {classroomFor(a, c.overlaps[0])}
               {" · "}
               {b.courseCode} {classroomFor(b, c.overlaps[0])}
+            </div>
+            <div className="mt-1.5 flex gap-3 text-[10px]">
+              <Link
+                href={courseDetailHref(a)}
+                className="text-[color:var(--color-text-dim)] hover:text-[color:var(--color-accent)] hover:underline"
+              >
+                {a.snapshot.courseName} · 詳細資料
+              </Link>
+              <Link
+                href={courseDetailHref(b)}
+                className="text-[color:var(--color-text-dim)] hover:text-[color:var(--color-accent)] hover:underline"
+              >
+                {b.snapshot.courseName} · 詳細資料
+              </Link>
             </div>
           </li>
         );

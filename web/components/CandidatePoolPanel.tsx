@@ -17,7 +17,9 @@ export function CandidatePoolPanel() {
 
   return (
     <aside
-      className={`fixed bottom-4 right-4 z-30 w-80 rounded-lg border bg-[color:var(--color-surface)] shadow-lg transition ${
+      className={`fixed bottom-4 right-4 z-30 flex w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-lg border bg-[color:var(--color-surface)] shadow-lg transition sm:w-80 ${
+        open ? "max-h-[min(22rem,70vh)]" : ""
+      } ${
         open ? "" : "translate-y-[calc(100%-44px)]"
       }`}
       aria-label="候選課程池"
@@ -25,14 +27,14 @@ export function CandidatePoolPanel() {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center justify-between rounded-t-lg px-3 py-2.5 text-left text-sm font-semibold"
+        className="flex w-full shrink-0 items-center justify-between rounded-t-lg px-3 py-2.5 text-left text-sm font-semibold"
       >
         <span>候選課程池 ({entries.length})</span>
         <span className="text-[color:var(--color-text-dim)]">
           {open ? "▾" : "▴"}
         </span>
       </button>
-      <div className="max-h-80 overflow-auto border-t">
+      <div className="min-h-0 flex-1 overflow-y-auto border-t">
         {entries.length === 0 ? (
           <p className="p-3 text-xs text-[color:var(--color-text-dim)]">
             尚未加入任何課程。從課程卡片點「+ 候選」即可加入。
@@ -65,7 +67,7 @@ export function CandidatePoolPanel() {
         )}
       </div>
       {entries.length > 0 && (
-        <div className="flex items-center justify-between border-t px-3 py-2 text-xs">
+        <div className="flex shrink-0 items-center justify-between border-t px-3 py-2 text-xs">
           <Link
             href="/schedule"
             className="rounded border px-2.5 py-1 text-[color:var(--color-accent)] hover:border-[color:var(--color-accent)]"

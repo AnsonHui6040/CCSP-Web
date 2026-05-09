@@ -146,13 +146,15 @@ export function ScheduleClient({ sharedCourses }: Props) {
             <WeeklyGrid blocks={blocks} conflictKeys={conflictKeys} mode={mode} noTimeCourses={noTimeCourses} />
           </div>
         </div>
-        <ScheduleSidebar
-          courses={courses}
-          conflicts={conflicts}
-          linkBack={linkBack}
-          stats={stats}
-          mode={mode}
-        />
+        <div className="sticky top-4 self-start h-[calc(100vh-5rem)] overflow-hidden">
+          <ScheduleSidebar
+            courses={courses}
+            conflicts={conflicts}
+            linkBack={linkBack}
+            stats={stats}
+            mode={mode}
+          />
+        </div>
       </div>
     </div>
   );

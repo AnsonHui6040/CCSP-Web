@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { courseDetailHref } from "@/lib/courseLinks";
 import {
   addSnapshotToSchedule,
   confirmCourse,
@@ -33,8 +35,8 @@ export function ScheduleSidebar(props: Props) {
   const noTime = props.courses.filter((c) => c.snapshot.timeSlots.length === 0);
 
   return (
-    <aside className="rounded-lg border bg-[color:var(--color-surface)] p-3">
-      <nav className="mb-3 flex flex-wrap gap-1 text-xs">
+    <aside className="flex h-full flex-col overflow-hidden rounded-lg border bg-[color:var(--color-surface)] p-3">
+      <nav className="mb-3 flex shrink-0 flex-wrap gap-1 text-xs">
         <TabButton current={tab} value="candidates" onSelect={setTab} label="候選" />
         <TabButton
           current={tab}
@@ -57,6 +59,7 @@ export function ScheduleSidebar(props: Props) {
         <TabButton current={tab} value="stats" onSelect={setTab} label="分析" />
       </nav>
 
+      <div className="min-h-0 flex-1 overflow-y-auto">
       {tab === "candidates" && <CandidatesTab />}
       {tab === "scheduled" && (
         <ScheduledTab courses={props.courses} mode={props.mode} />
@@ -84,6 +87,7 @@ export function ScheduleSidebar(props: Props) {
         )
       )}
       {tab === "stats" && <ScheduleStatsPanel stats={props.stats} />}
+      </div>
     </aside>
   );
 }
@@ -141,12 +145,20 @@ function CandidatesTab() {
               >
                 {inSched ? "已加入" : "加入課表"}
               </button>
-              <button
-                onClick={() => remove(e)}
-                className="text-[10px] text-[color:var(--color-text-dim)] hover:text-[color:var(--color-danger)]"
-              >
-                從候選移除
-              </button>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={courseDetailHref(e)}
+                  className="text-[10px] text-[color:var(--color-text-dim)] hover:text-[color:var(--color-accent)] hover:underline"
+                >
+                  詳細資料
+                </Link>
+                <button
+                  onClick={() => remove(e)}
+                  className="text-[10px] text-[color:var(--color-text-dim)] hover:text-[color:var(--color-danger)]"
+                >
+                  從候選移除
+                </button>
+              </div>
             </div>
           </li>
         );
@@ -200,6 +212,12 @@ function ScheduledTab({
                 : ""}
             </div>
             <div className="mt-1.5 flex items-center justify-end gap-2">
+              <Link
+                href={courseDetailHref(entry)}
+                className="mr-auto text-[10px] text-[color:var(--color-text-dim)] hover:text-[color:var(--color-accent)] hover:underline"
+              >
+                詳細資料
+              </Link>
               {entry.status === "confirmed" ? (
                 <button
                   onClick={() => unconfirmCourse(entry)}

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
+import { BackButton } from "@/components/BackButton";
 import { CourseDetailActions } from "@/components/CourseDetailActions";
+import { CourseDetailRefreshButton } from "@/components/CourseDetailRefreshButton";
 import { getCourseWithDetails } from "@/lib/queries";
 import { TAG_DEFS_BY_KEY, sortTagKeys } from "@/lib/tags";
 import {
@@ -49,12 +51,10 @@ export default async function CourseDetailPage({
     <>
       <Navbar active="courses" />
       <main className="mx-auto max-w-5xl px-6 py-6">
-        <Link
-          href="/courses"
+        <BackButton
+          fallbackHref="/courses"
           className="mb-3 inline-block text-xs text-[color:var(--color-text-dim)] hover:text-[color:var(--color-accent)]"
-        >
-          ← 返回課程搜尋
-        </Link>
+        />
 
         <header className="rounded-lg border bg-[color:var(--color-surface)] p-5">
           <div className="flex flex-wrap items-baseline gap-2">
@@ -254,6 +254,13 @@ export default async function CourseDetailPage({
               </Card>
             )}
 
+            <CourseDetailRefreshButton
+              year={course.year}
+              semester={course.semester}
+              courseCode={course.courseCode}
+              fetchedAt={detail?.fetchedAt ?? null}
+            />
+
             {detail && detail.fetchStatus !== "success" && (
               <div className="rounded border border-[color:var(--color-warn)]/50 bg-[color:var(--color-warn)]/5 p-3 text-xs text-[color:var(--color-warn)]">
                 <div className="font-semibold">
@@ -264,17 +271,6 @@ export default async function CourseDetailPage({
                     {detail.errorMessage}
                   </div>
                 )}
-              </div>
-            )}
-
-            {!detail && (
-              <div className="rounded border border-dashed p-3 text-xs text-[color:var(--color-text-dim)]">
-                尚未抓取本課的詳細頁。執行：
-                <code className="mt-1 block rounded bg-[color:var(--color-surface-2)] p-1.5 text-[10px]">
-                  python -m ccsp_importer.cli scrape-details
-                  --year {course.year} --semester {course.semester} --course{" "}
-                  {course.courseCode}
-                </code>
               </div>
             )}
 
