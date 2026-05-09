@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 
 type Department = { code: string; name: string; count: number };
 
@@ -23,6 +23,22 @@ export function FilterSidebar({ departments }: Props) {
   const router = useRouter();
   const params = useSearchParams();
   const [pending, startTransition] = useTransition();
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Count active filters to show on the toggle button
+  const activeCount = [
+    params.get("weekday"),
+    params.get("dept"),
+    params.get("required"),
+    params.get("open"),
+    params.get("risk"),
+    params.get("english"),
+    params.get("remote"),
+    params.get("restricted"),
+    params.get("hideNoOnline"),
+    params.get("hideManual"),
+    params.get("hideNoGrad"),
+  ].filter(Boolean).length;
 
   function update(patch: Record<string, string | null>) {
     const next = new URLSearchParams(params.toString());
@@ -42,7 +58,28 @@ export function FilterSidebar({ departments }: Props) {
   const hasOpening = params.get("open") === "1";
 
   return (
-    <aside className="space-y-5 text-sm">
+    <aside className="text-sm">
+      {/* ── Mobile toggle ───────────────────────────────────────── */}
+      <button
+        type="button"
+        onClick={() => setMobileOpen((v) => !v)}
+        className="mb-3 flex w-full items-center justify-between rounded-md border px-3 py-2 text-sm lg:hidden"
+      >
+        <span className="font-semibold">
+          篩選條件
+          {activeCount > 0 && (
+            <span className="ml-2 rounded-full bg-[color:var(--color-accent)]/20 px-1.5 py-0.5 text-[10px] text-[color:var(--color-accent)]">
+              {activeCount}
+            </span>
+          )}
+        </span>
+        <span className="text-[color:var(--color-text-dim)]">
+          {mobileOpen ? "▴" : "▾"}
+        </span>
+      </button>
+
+      {/* ── Filter panels: always visible on lg+, toggle on mobile ── */}
+      <div className={`space-y-5 ${mobileOpen ? "block" : "hidden"} lg:block`}>
       <Section title="星期">
         <div className="flex flex-wrap gap-1.5">
           {WEEKDAYS.map((w) => {
@@ -159,6 +196,7 @@ export function FilterSidebar({ departments }: Props) {
           重新載入課程…
         </div>
       )}
+      </div>
     </aside>
   );
 }

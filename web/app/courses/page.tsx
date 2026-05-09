@@ -13,6 +13,7 @@ import { SearchForm } from "@/components/SearchForm";
 import { FilterSidebar } from "@/components/FilterSidebar";
 import { TermSwitcher } from "@/components/TermSwitcher";
 import { CandidatePoolPanel } from "@/components/CandidatePoolPanel";
+import { CourseListScroll } from "@/components/CourseListScroll";
 import { Navbar } from "@/components/Navbar";
 
 export const dynamic = "force-dynamic";
@@ -83,6 +84,15 @@ export default async function CoursesPage({
   const offset = pickInt(sp.offset) ?? 0;
   const limit = 60;
 
+  // Build a stable scroll-restoration key from all active search params.
+  // Including every filter ensures different queries never share a scroll position.
+  const scrollKeyParams = new URLSearchParams();
+  for (const [k, v] of Object.entries(sp)) {
+    if (typeof v === "string") scrollKeyParams.set(k, v);
+  }
+  scrollKeyParams.sort();
+  const scrollKey = `/courses?${scrollKeyParams.toString()}`;
+
   const { rows, total } = searchCourses({
     q: q || undefined,
     year: term.year,
@@ -110,8 +120,8 @@ export default async function CoursesPage({
   return (
     <>
     <Navbar active="courses" />
-    <main className="mx-auto max-w-7xl px-6 py-8">
-      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
+    <main className="mx-auto flex h-[calc(100vh-2.75rem)] max-w-7xl flex-col px-6 pt-6">
+      <header className="mb-4 flex shrink-0 flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">課程搜尋</h1>
           <p className="text-sm text-[color:var(--color-text-dim)]">
@@ -135,14 +145,14 @@ export default async function CoursesPage({
 
       {/* Warning: viewing an older term while a newer one is available */}
       {viewingOlderTerm && (
-        <div className="mb-4 rounded-md border border-[color:var(--color-warn,#b45309)] bg-[color:var(--color-warn-bg,#451a03)] px-4 py-2.5 text-sm text-[color:var(--color-warn,#b45309)]">
+        <div className="mb-4 shrink-0 rounded-md border border-[color:var(--color-warn,#b45309)] bg-[color:var(--color-warn-bg,#451a03)] px-4 py-2.5 text-sm text-[color:var(--color-warn,#b45309)]">
           目前顯示的是 {term.year}-{term.semester} 資料，可能不是目前學期（{inferredTerm.year}-{inferredTerm.semester}）。請切換學期以查看最新課程。
         </div>
       )}
 
       {/* Warning: inferred current term not yet imported */}
       {currentTermMissing && (
-        <div className="mb-4 rounded-md border border-[color:var(--color-warn,#b45309)] bg-[color:var(--color-warn-bg,#451a03)] px-4 py-2.5 text-sm text-[color:var(--color-warn,#b45309)]">
+        <div className="mb-4 shrink-0 rounded-md border border-[color:var(--color-warn,#b45309)] bg-[color:var(--color-warn-bg,#451a03)] px-4 py-2.5 text-sm text-[color:var(--color-warn,#b45309)]">
           目前學期（{inferredTerm.year}-{inferredTerm.semester}）資料尚未匯入。請先執行：
           <code className="ml-2 rounded bg-[color:var(--color-surface-2)] px-1.5 py-0.5 text-xs text-[color:var(--color-text)]">
             python -m ccsp_importer.cli scrape --year {inferredTerm.year} --semester {inferredTerm.semester}
@@ -150,14 +160,14 @@ export default async function CoursesPage({
         </div>
       )}
 
-      <div className="mb-5">
+      <div className="mb-4 shrink-0">
         <SearchForm initialQuery={q} />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[16rem_1fr]">
+      <div className="grid min-h-0 flex-1 gap-6 overflow-hidden lg:grid-cols-[16rem_1fr]">
         <FilterSidebar departments={departments} />
 
-        <section className="min-w-0">
+        <CourseListScroll scrollKey={scrollKey} className="min-h-0 min-w-0 overflow-y-auto pb-6">
           <div className="mb-3 flex items-baseline justify-between">
             <p className="text-sm text-[color:var(--color-text-dim)]">
               共 <span className="text-[color:var(--color-text)]">{total}</span> 門
@@ -185,7 +195,7 @@ export default async function CoursesPage({
           )}
 
           <Pagination total={total} offset={offset} limit={limit} sp={sp} />
-        </section>
+        </CourseListScroll>
       </div>
 
       <CandidatePoolPanel />

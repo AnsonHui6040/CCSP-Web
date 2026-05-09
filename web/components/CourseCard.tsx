@@ -30,7 +30,10 @@ export function CourseCard({ course }: Props) {
   const sortedTags = sortTagKeys(course.tags);
   const restrictionRules = course.rules.filter((r) => r.type === "restriction");
   return (
-    <article className="rounded-lg border bg-[color:var(--color-surface)] p-4 transition hover:border-[color:var(--color-text-dim)]">
+    <article
+      data-course-code={course.courseCode}
+      className="rounded-lg border bg-[color:var(--color-surface)] p-4 transition hover:border-[color:var(--color-text-dim)]"
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-2">
