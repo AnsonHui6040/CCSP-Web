@@ -9,6 +9,7 @@ import { ScheduleSidebar } from "@/components/schedule/ScheduleSidebar";
 import { ScheduleToolbar } from "@/components/schedule/ScheduleToolbar";
 import { WeeklyGrid } from "@/components/schedule/WeeklyGrid";
 import { ExportScheduleButton } from "@/components/schedule/ExportScheduleButton";
+import { ExportSchedulePdfButton } from "@/components/schedule/ExportSchedulePdfButton";
 
 export function ScheduleClient() {
   const { courses, mode, hydrated } = useSchedule();
@@ -75,7 +76,12 @@ export function ScheduleClient() {
         mode={mode}
         stats={stats}
         conflictPairs={conflicts.length}
-        exportButton={<ExportScheduleButton targetRef={gridRef} filename="ccsp-schedule-114-1.png" />}
+        exportButton={
+          <>
+            <ExportScheduleButton targetRef={gridRef} filename="ccsp-schedule-114-1.png" />
+            <ExportSchedulePdfButton targetRef={gridRef} filename="ccsp-schedule-114-1.pdf" />
+          </>
+        }
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div ref={gridRef}>
