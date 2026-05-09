@@ -7,7 +7,7 @@ import logging
 import sys
 from typing import List, Optional
 
-from . import db, detail_scraper, note_runner, scraper
+from . import db, detail_audit, detail_scraper, note_runner, scraper, textbook_extractor
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -82,6 +82,48 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="bypass disk cache; always re-fetch",
     )
 
+    p_ad = sub.add_parser(
+        "audit-details",
+        help="produce a detail data-quality audit report for one term",
+    )
+    p_ad.add_argument("--year", type=int, required=True)
+    p_ad.add_argument("--semester", type=int, required=True, choices=[1, 2])
+    p_ad.add_argument(
+        "--samples", type=int, default=5, help="max error samples per category (default 5)"
+    )
+    p_ad.add_argument(
+        "--output",
+        default=None,
+        help="path for Markdown report (default: reports/detail_audit_{year}_{sem}.md)",
+    )
+
+    p_et = sub.add_parser(
+        "extract-textbooks",
+        help="extract textbook info from course_details and write to textbook column",
+    )
+    p_et.add_argument("--year", type=int, required=True)
+    p_et.add_argument("--semester", type=int, required=True, choices=[1, 2])
+    p_et.add_argument(
+        "--course",
+        action="append",
+        default=None,
+        help="restrict to one course_code (can be repeated)",
+    )
+    p_et.add_argument("--limit", type=int, default=None, help="cap number of courses processed")
+    p_et.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="extract but do not write results to DB",
+    )
+    p_et.add_argument(
+        "--samples", type=int, default=5, help="max samples per category (default 5)"
+    )
+    p_et.add_argument(
+        "--output",
+        default=None,
+        help="path for Markdown report (default: reports/textbook_extraction_{year}_{sem}.md)",
+    )
+
     args = parser.parse_args(argv)
 
     logging.basicConfig(
@@ -123,6 +165,63 @@ def main(argv: Optional[List[str]] = None) -> int:
             use_cache=args.use_cache,
         )
         print(json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.cmd == "audit-details":
+        from pathlib import Path
+        report = detail_audit.build_detail_audit(
+            year=args.year, semester=args.semester, n_samples=args.samples
+        )
+        # console JSON summary
+        summary = {
+            k: v for k, v in report.items()
+            if k not in ("section_frequency", "missing_section_frequency",
+                         "sample_raw_sections", "sample_parse_errors",
+                         "sample_http_errors", "sample_not_found")
+        }
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        # Markdown report
+        out_path = (
+            Path(args.output)
+            if args.output
+            else Path("reports") / f"detail_audit_{args.year}_{args.semester}.md"
+        )
+        detail_audit.write_report(report, out_path)
+        print(f"\nMarkdown report written to: {out_path}")
+        return 0
+
+    if args.cmd == "extract-textbooks":
+        from pathlib import Path
+
+        report = textbook_extractor.run_extraction(
+            year=args.year,
+            semester=args.semester,
+            only_courses=args.course,
+            limit=args.limit,
+            dry_run=args.dry_run,
+            n_samples=args.samples,
+        )
+        # console JSON summary (exclude large list fields)
+        summary = {
+            k: v
+            for k, v in report.items()
+            if k
+            not in (
+                "sample_extractions",
+                "sample_no_textbook",
+                "sample_suspicious",
+                "top_keyword_distribution",
+            )
+        }
+        print(json.dumps(summary, ensure_ascii=False, indent=2))
+        out_path = (
+            Path(args.output)
+            if args.output
+            else Path("reports")
+            / f"textbook_extraction_{args.year}_{args.semester}.md"
+        )
+        textbook_extractor.write_report(report, out_path)
+        print(f"\nMarkdown report written to: {out_path}")
         return 0
 
     parser.error(f"unknown command {args.cmd!r}")

@@ -181,7 +181,7 @@ def _scrape_one(
                     http_status=resp.status_code,
                 )
                 return {"fetch_status": "http_error"}
-            resp.encoding = resp.apparent_encoding or "utf-8"
+            resp.encoding = "utf-8"  # page declares <meta charset="utf-8">; apparent_encoding can misdetect Chinese content
             html = resp.text
             if use_cache:
                 cache_path.write_text(html, encoding="utf-8")

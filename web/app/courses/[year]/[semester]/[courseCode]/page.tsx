@@ -200,11 +200,19 @@ export default async function CourseDetailPage({
               )}
             </Card>
 
-            <DetailSection
-              title="教材 / 參考書目"
-              content={detail?.referenceBooks ?? detail?.textbook ?? null}
-              missingHint={detail ? "尚未取得詳細資料" : undefined}
-            />
+            {detail?.textbook && (
+              <DetailSection title="教材" content={detail.textbook} />
+            )}
+            {detail?.referenceBooks && (
+              <DetailSection title="參考書目" content={detail.referenceBooks} />
+            )}
+            {!detail?.textbook && !detail?.referenceBooks && (
+              <DetailSection
+                title="教材 / 參考書目"
+                content={null}
+                missingHint={detail ? "尚未取得教材資料" : undefined}
+              />
+            )}
 
             <DetailSection title="Office Hour" content={detail?.officeHour} />
           </section>

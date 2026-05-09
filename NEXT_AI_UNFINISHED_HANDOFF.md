@@ -795,3 +795,22 @@ BeautifulSoup `descendants` 不會為 void elements 吐 text。早期 raw_text �
 開工順利。
 
 — P5B 結束時的 AI 留
+
+---
+
+## 最終接手摘要
+
+目前專案已完成：
+
+**課程搜尋 → 候選池 → 預排課表 → 衝堂分析 → 正式確認 → 課程詳細頁 → 合併課表 block → 衝堂 block 並排**
+
+測試狀態：`npm test` 105/105 pass、`npm run typecheck` clean、`/schedule` SSR HTTP 200。
+
+下一位 AI 的優先順序：
+
+1. **P5B 瀏覽器人工視覺驗收**（unit test 已通過，但視覺未人工確認）
+2. 若發現 P5B UI 破版，先修 `WeeklyGrid.tsx` / `ScheduleCourseBlock.tsx`
+3. 跑完整 114-1 detail scrape（`scrape-details --only-missing --sleep 1.5`）
+4. 產生 full detail data quality report
+5. 做 P7 textbook extractor（rule-based，不使用 AI）
+6. 最後才做 P8 PNG / PDF / sharing
