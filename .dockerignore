@@ -16,13 +16,16 @@ web/out/
 **/__pycache__/
 **/*.py[cod]
 **/*.egg-info/
+.venv/
 importer/.venv/
 importer/.pytest_cache/
 importer/.mypy_cache/
 importer/.ruff_cache/
 
-# ── Data (lives on Fly volume — never bake into image) ───────────────────────
+# ── Data (lives on persistent volume — never bake into image) ───────────────
 data/
+logs/
+reports/
 
 # ── Dev / research artifacts ─────────────────────────────────────────────────
 tmp_inspect/
@@ -36,6 +39,7 @@ Thumbs.db
 
 # ── Env / secrets ────────────────────────────────────────────────────────────
 .env
+.env.*
 .env.local
 .env.*.local
 

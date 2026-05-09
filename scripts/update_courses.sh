@@ -36,10 +36,14 @@ cd "$IMPORTER_DIR"
 
 # ── Step 1: Scrape main course data ─────────────────────────────────────────
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Step 1: scrape main course data"
-python -m ccsp_importer.cli scrape --year "$YEAR" --semester "$SEMESTER"
+
+# Use $IMPORTER_PYTHON when set (e.g. inside Docker/ClawCloud Run container),
+# otherwise fall back to python3 on the system PATH.
+PYTHON="${IMPORTER_PYTHON:-python3}"
+"$PYTHON" -m ccsp_importer.cli scrape --year "$YEAR" --semester "$SEMESTER"
 
 # ── Step 2: Re-parse notes (tags / warnings / rules / risk_level) ────────────
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Step 2: parse-notes"
-python -m ccsp_importer.cli parse-notes --year "$YEAR" --semester "$SEMESTER"
+"$PYTHON" -m ccsp_importer.cli parse-notes --year "$YEAR" --semester "$SEMESTER"
 
 echo "[$(date '+%Y-%m-%d %H:%M:%S')] Done."

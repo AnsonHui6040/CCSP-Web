@@ -5,8 +5,9 @@
 #   • Next.js (web/) — served by `next start` on port 3000
 #   • Python importer (importer/) — called on-demand by the refresh-detail API
 #
-# Data (SQLite) lives on a Fly.io volume at /app/data and is NOT baked into
-# this image. Run `init-db` + `scrape` via `fly ssh console` after first deploy.
+# Data (SQLite) lives on a persistent volume mounted at /app/data and is NOT
+# baked into this image. Run `init-db` + `scrape` via the platform terminal
+# after first deploy.
 # ─────────────────────────────────────────────────────────────────────────────
 
 FROM node:22-slim AS base
@@ -85,8 +86,8 @@ ENV CCSP_DB_PATH=/app/data/ccsp.sqlite
 ENV CCSP_DATA_DIR=/app/data
 ENV IMPORTER_PYTHON=/app/importer/.venv/bin/python
 
-# /app/data is mounted as a Fly volume — the directory must exist so the
-# mount point can be created before the volume is attached.
+# /app/data is mounted as a persistent volume — the directory must exist
+# so the mount point can be created before the volume is attached.
 RUN mkdir -p /app/data
 
 WORKDIR /app/web

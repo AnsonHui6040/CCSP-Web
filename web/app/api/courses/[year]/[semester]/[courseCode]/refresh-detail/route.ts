@@ -59,6 +59,9 @@ function getClientIp(req: Request): string {
   // Fly.io sets the real client IP in this header
   const flyIp = req.headers.get("fly-client-ip");
   if (flyIp) return flyIp.trim();
+  // ClawCloud Run / nginx reverse proxy
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
   const xff = req.headers.get("x-forwarded-for");
   if (xff) {
     const first = xff.split(",")[0].trim();
