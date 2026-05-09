@@ -207,3 +207,42 @@ describe("determinism", () => {
     expect(encodeSharedSchedule(state)).toBe(encodeSharedSchedule(state));
   });
 });
+
+// ---------------------------------------------------------------------------
+// courses length limit
+
+describe("normalizeSharedSchedule — courses length limit", () => {
+  function makeCourses(n: number) {
+    return Array.from({ length: n }, (_, i) => ({
+      y: 114,
+      s: 1,
+      c: String(i + 1).padStart(4, "0"),
+      st: "planned" as const,
+    }));
+  }
+
+  it("100 門課 OK", () => {
+    const result = normalizeSharedSchedule({ v: 1, courses: makeCourses(100) });
+    expect(result).not.toBeNull();
+    expect(result?.courses).toHaveLength(100);
+  });
+
+  it("101 門課回傳 null", () => {
+    expect(
+      normalizeSharedSchedule({ v: 1, courses: makeCourses(101) }),
+    ).toBeNull();
+  });
+
+  it("超大 payload（1000 門）回傳 null 且不 crash", () => {
+    expect(
+      normalizeSharedSchedule({ v: 1, courses: makeCourses(1000) }),
+    ).toBeNull();
+  });
+
+  it("encodeSharedSchedule + decodeSharedSchedule round-trip 100 門", () => {
+    const state = makeState(makeCourses(100));
+    const decoded = decodeSharedSchedule(encodeSharedSchedule(state));
+    expect(decoded).not.toBeNull();
+    expect(decoded?.courses).toHaveLength(100);
+  });
+});

@@ -41,6 +41,7 @@ export function normalizeSharedSchedule(
   const o = input as Record<string, unknown>;
   if (o["v"] !== 1) return null;
   if (!Array.isArray(o["courses"])) return null;
+  if ((o["courses"] as unknown[]).length > 100) return null;
 
   const courses: SharedCourseEntry[] = [];
   for (const item of o["courses"]) {

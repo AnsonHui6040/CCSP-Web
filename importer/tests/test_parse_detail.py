@@ -213,3 +213,65 @@ def test_grading_table_with_decimals_and_unicode_content():
         {"item": "期中考", "percent": 33.3, "note": "含口試"},
         {"item": "期末考", "percent": 66.7, "note": None},
     ]
+
+
+# ---------------------------------------------------------------------------
+# 6. syllabusUrl scheme whitelist
+
+def _syllabus_page(href: str) -> str:
+    """Minimal page with desc.ithu.tw link replaced by arbitrary href."""
+    return f"""
+    <html><body><div id="mainContent">
+      <h2 class="title"><span>課程資訊</span></h2>
+      <p><a href="{href}">syllabus</a></p>
+    </div></body></html>
+    """
+
+
+def test_syllabus_http_allowed():
+    r = parse_course_detail(
+        _syllabus_page("http://desc.ithu.tw/114/1/0001"),
+        year=114, semester=1, course_code="0001",
+    )
+    assert r["syllabus_url"] == "http://desc.ithu.tw/114/1/0001"
+
+
+def test_syllabus_https_allowed():
+    r = parse_course_detail(
+        _syllabus_page("https://desc.ithu.tw/114/1/0001"),
+        year=114, semester=1, course_code="0001",
+    )
+    assert r["syllabus_url"] == "https://desc.ithu.tw/114/1/0001"
+
+
+def test_syllabus_javascript_blocked():
+    """javascript: URIs must never be stored as syllabus_url."""
+    r = parse_course_detail(
+        _syllabus_page("javascript:alert(1)"),
+        year=114, semester=1, course_code="0001",
+    )
+    assert r["syllabus_url"] is None
+
+
+def test_syllabus_data_uri_blocked():
+    r = parse_course_detail(
+        _syllabus_page("data:text/html,<script>alert(1)</script>"),
+        year=114, semester=1, course_code="0001",
+    )
+    assert r["syllabus_url"] is None
+
+
+def test_syllabus_vbscript_blocked():
+    r = parse_course_detail(
+        _syllabus_page("vbscript:MsgBox(1)"),
+        year=114, semester=1, course_code="0001",
+    )
+    assert r["syllabus_url"] is None
+
+
+def test_syllabus_file_scheme_blocked():
+    r = parse_course_detail(
+        _syllabus_page("file:///etc/passwd"),
+        year=114, semester=1, course_code="0001",
+    )
+    assert r["syllabus_url"] is None

@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 import re
 from typing import Optional
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup, NavigableString, Tag
 
@@ -217,11 +217,21 @@ def _safe_float(s: str) -> Optional[float]:
 def _extract_syllabus_url(main: Tag, base_url: str) -> Optional[str]:
     """The syllabus link is usually `desc.ithu.tw/{year}/{sem}/{code}`.
     Fall back to any anchor under any heading named "授課大綱" if the
-    canonical pattern is missing (synthetic / shape-variant pages)."""
+    canonical pattern is missing (synthetic / shape-variant pages).
+
+    Only http / https URLs are returned; any other scheme (javascript:,
+    data:, file:, vbscript:, etc.) is discarded for safety.
+    """
+    def _safe(href: str) -> Optional[str]:
+        resolved = urljoin(base_url, href)
+        if urlparse(resolved).scheme in ("http", "https"):
+            return resolved
+        return None
+
     for a in main.find_all("a", href=True):
         href = a["href"].strip()
         if "desc.ithu.tw" in href:
-            return urljoin(base_url, href)
+            return _safe(href)
     for h in main.find_all(_HEADING_TAGS):
         if _heading_text(h) != "授課大綱":
             continue
@@ -232,7 +242,7 @@ def _extract_syllabus_url(main: Tag, base_url: str) -> Optional[str]:
             continue
         a = parent.find("a", href=True)
         if a:
-            return urljoin(base_url, a["href"].strip())
+            return _safe(a["href"].strip())
     return None
 
 
