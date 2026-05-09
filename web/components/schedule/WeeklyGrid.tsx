@@ -56,9 +56,13 @@ export function WeeklyGrid({ blocks, conflictKeys, mode, noTimeCourses }: Props)
       ]
     : [...OFFICIAL_PERIODS];
 
+  // In official mode, hide the 未排定時間 column entirely.
+  const showNoTimeCol = mode === "planning";
+
   // CSS grid sizing.
-  const gridTemplateColumns =
-    "5.5rem repeat(7, minmax(0, 1fr)) minmax(9rem, 13rem)";
+  const gridTemplateColumns = showNoTimeCol
+    ? "5.5rem repeat(7, minmax(0, 1fr)) minmax(9rem, 13rem)"
+    : "5.5rem repeat(7, minmax(0, 1fr))";
   const gridTemplateRows = [
     "auto",
     ...displayRows.map((r) =>
@@ -67,7 +71,7 @@ export function WeeklyGrid({ blocks, conflictKeys, mode, noTimeCourses }: Props)
   ].join(" ");
 
   return (
-    <div className="overflow-x-auto rounded-lg border bg-[color:var(--color-surface)]">
+    <div className="rounded-lg border bg-[color:var(--color-surface)]">
       <div
         className="grid min-w-[820px]"
         style={{ gridTemplateColumns, gridTemplateRows }}
@@ -81,9 +85,11 @@ export function WeeklyGrid({ blocks, conflictKeys, mode, noTimeCourses }: Props)
             {d.label}
           </HeaderCell>
         ))}
-        <HeaderCell row={1} col={9}>
-          未排定時間
-        </HeaderCell>
+        {showNoTimeCol && (
+          <HeaderCell row={1} col={9}>
+            未排定時間
+          </HeaderCell>
+        )}
 
         {/* ── Period skeleton rows ──────────────────────────────────── */}
         {displayRows.map((period, pi) => {
@@ -125,11 +131,13 @@ export function WeeklyGrid({ blocks, conflictKeys, mode, noTimeCourses }: Props)
         })}
 
         {/* ── 未排定時間 merged column content ─────────────────────── */}
-        <NoTimeColumn
-          rowStart={2}
-          rowSpan={displayRows.length}
-          courses={noTimeCourses}
-        />
+        {showNoTimeCol && (
+          <NoTimeColumn
+            rowStart={2}
+            rowSpan={displayRows.length}
+            courses={noTimeCourses}
+          />
+        )}
 
         {/* ── Course blocks ─────────────────────────────────────────── */}
         {blocks.map((b) => {

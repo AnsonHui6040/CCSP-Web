@@ -29,8 +29,11 @@ export function ScheduleToolbar({ mode, stats, conflictPairs, exportButton, term
     if (conflictPairs > 0) {
       statusText = "正式模式中仍有衝堂，請返回預排模式調整。";
       statusTone = "text-[color:var(--color-danger)]";
+    } else if (stats.noTimeCourses > 0) {
+      statusText = "仍有未排定時間課程，請回到預排模式處理。";
+      statusTone = "text-[color:var(--color-warn)]";
     }
-    // No message when official + no conflicts — the grid speaks for itself.
+    // No message when official + no issues — the grid speaks for itself.
   }
 
   return (

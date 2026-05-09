@@ -37,11 +37,35 @@ export function ExportScheduleButton({ targetRef, filename = "ccsp-schedule.png"
           .getPropertyValue("--color-bg")
           .trim() || "#0b0d10";
 
-      const dataUrl = await toPng(el, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: bg,
-      });
+      // Hide all scrollbars within the capture target so they don't appear
+      // in the exported image.  Injected as a <style> tag so we don't touch
+      // element styles and can clean up reliably in the finally block.
+      const scrollbarStyle = document.createElement("style");
+      scrollbarStyle.textContent = [
+        "#ccsp-export-root *{scrollbar-width:none!important}",
+        "#ccsp-export-root *::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}",
+      ].join("\n");
+      el.id = "ccsp-export-root";
+      document.head.appendChild(scrollbarStyle);
+
+      // Wait for fonts + one paint cycle so layout is fully settled.
+      await document.fonts.ready;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      let dataUrl: string;
+      try {
+        dataUrl = await toPng(el, {
+          cacheBust: true,
+          pixelRatio: 2,
+          backgroundColor: bg,
+          // Capture the full scrollable extent, not just the visible viewport.
+          width: el.scrollWidth,
+          height: el.scrollHeight,
+        });
+      } finally {
+        el.id = "";
+        scrollbarStyle.remove();
+      }
       if (abortRef.current) return;
 
       // Trigger download

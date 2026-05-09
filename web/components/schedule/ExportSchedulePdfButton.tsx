@@ -43,11 +43,37 @@ export function ExportSchedulePdfButton({
           .getPropertyValue("--color-bg")
           .trim() || "#0b0d10";
 
-      const dataUrl = await toPng(el, {
-        cacheBust: true,
-        pixelRatio: 2,
-        backgroundColor: bg,
-      });
+      // Hide all scrollbars within the capture target so they don't appear
+      // in the exported PDF.  Injected as a <style> tag so we can clean up
+      // reliably in the finally block.
+      const scrollbarStyle = document.createElement("style");
+      scrollbarStyle.textContent = [
+        "#ccsp-export-root *{scrollbar-width:none!important}",
+        "#ccsp-export-root *::-webkit-scrollbar{display:none!important;width:0!important;height:0!important}",
+      ].join("\n");
+      el.id = "ccsp-export-root";
+      document.head.appendChild(scrollbarStyle);
+
+      // Wait for fonts + one paint cycle so layout is fully settled.
+      await document.fonts.ready;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+      let dataUrl: string;
+      // Capture the full scrollable extent, not just the visible viewport.
+      const captureW = el.scrollWidth;
+      const captureH = el.scrollHeight;
+      try {
+        dataUrl = await toPng(el, {
+          cacheBust: true,
+          pixelRatio: 2,
+          backgroundColor: bg,
+          width: captureW,
+          height: captureH,
+        });
+      } finally {
+        el.id = "";
+        scrollbarStyle.remove();
+      }
       if (abortRef.current) return;
 
       // A4 landscape in mm
@@ -58,8 +84,7 @@ export function ExportSchedulePdfButton({
       const maxH = pageH - margin * 2;
 
       // Read the actual rendered pixel dimensions from the element
-      const { offsetWidth: px, offsetHeight: py } = el;
-      const aspectRatio = px / py;
+      const aspectRatio = captureW / captureH;
 
       // Fit the image so it fills as much of the page as possible
       // without overflow or distortion.

@@ -141,8 +141,10 @@ export function ScheduleClient({ sharedCourses }: Props) {
         }
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div ref={gridRef}>
-          <WeeklyGrid blocks={blocks} conflictKeys={conflictKeys} mode={mode} noTimeCourses={noTimeCourses} />
+        <div className="overflow-x-auto">
+          <div ref={gridRef}>
+            <WeeklyGrid blocks={blocks} conflictKeys={conflictKeys} mode={mode} noTimeCourses={noTimeCourses} />
+          </div>
         </div>
         <ScheduleSidebar
           courses={courses}

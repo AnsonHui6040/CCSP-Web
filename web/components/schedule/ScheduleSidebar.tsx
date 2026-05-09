@@ -74,7 +74,15 @@ export function ScheduleSidebar(props: Props) {
           />
         )
       )}
-      {tab === "notime" && <NoTimeCourseList courses={noTime} />}
+      {tab === "notime" && (
+        props.mode === "official" && noTime.length > 0 ? (
+          <p className="rounded border border-dashed border-[color:var(--color-warn)] p-3 text-xs text-[color:var(--color-warn)]">
+            仍有未排定時間課程，請回到預排模式處理。
+          </p>
+        ) : (
+          <NoTimeCourseList courses={noTime} />
+        )
+      )}
       {tab === "stats" && <ScheduleStatsPanel stats={props.stats} />}
     </aside>
   );
