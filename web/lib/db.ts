@@ -15,7 +15,12 @@ declare global {
   var __ccspDb: DatabaseSync | undefined;
 }
 
-const DB_RELATIVE = process.env.CCSP_DB_PATH ?? "../data/ccsp.sqlite";
+// DATABASE_PATH (Fly.io / production) takes priority, then CCSP_DB_PATH
+// (legacy alias), then the repo-relative default for local dev.
+const DB_RELATIVE =
+  process.env.DATABASE_PATH ??
+  process.env.CCSP_DB_PATH ??
+  "../data/ccsp.sqlite";
 
 function open(): DatabaseSync {
   const abs = path.resolve(process.cwd(), DB_RELATIVE);

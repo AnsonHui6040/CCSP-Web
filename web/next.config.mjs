@@ -4,6 +4,9 @@ const nextConfig = {
   // No bundler treatment is needed.
   devIndicators: false,
 
+  // Produces a self-contained output in .next/standalone suitable for Docker.
+  output: "standalone",
+
   async headers() {
     const csp = [
       "default-src 'self'",

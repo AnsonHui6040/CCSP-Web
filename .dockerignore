@@ -1,0 +1,44 @@
+# ── Git internals ────────────────────────────────────────────────────────────
+.git/
+.gitignore
+.github/
+
+# ── CI / Claude internals ────────────────────────────────────────────────────
+.claude/
+
+# ── Node ─────────────────────────────────────────────────────────────────────
+web/node_modules/
+web/.next/
+web/*.tsbuildinfo
+web/out/
+
+# ── Python ───────────────────────────────────────────────────────────────────
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+importer/.venv/
+importer/.pytest_cache/
+importer/.mypy_cache/
+importer/.ruff_cache/
+
+# ── Data (lives on Fly volume — never bake into image) ───────────────────────
+data/
+
+# ── Dev / research artifacts ─────────────────────────────────────────────────
+tmp_inspect/
+docs/
+
+# ── Editor / OS ──────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ── Env / secrets ────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+NEXT_AI_UNFINISHED_HANDOFF.md
+README.md
