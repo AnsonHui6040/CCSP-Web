@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import { findAllConflicts, type CourseLike } from "@/lib/conflict";
 import { buildScheduleLayoutBlocks } from "@/lib/scheduleLayout";
 import { computeStats } from "@/lib/scheduleStats";
@@ -8,9 +8,11 @@ import { useSchedule, type StoredScheduleCourse } from "@/lib/scheduleStore";
 import { ScheduleSidebar } from "@/components/schedule/ScheduleSidebar";
 import { ScheduleToolbar } from "@/components/schedule/ScheduleToolbar";
 import { WeeklyGrid } from "@/components/schedule/WeeklyGrid";
+import { ExportScheduleButton } from "@/components/schedule/ExportScheduleButton";
 
 export function ScheduleClient() {
   const { courses, mode, hydrated } = useSchedule();
+  const gridRef = useRef<HTMLDivElement>(null);
 
   // Reference-link CourseLike adapters back to their persisted entry so
   // ConflictList can show rich info; conflict.ts compares by reference.
@@ -73,9 +75,12 @@ export function ScheduleClient() {
         mode={mode}
         stats={stats}
         conflictPairs={conflicts.length}
+        exportButton={<ExportScheduleButton targetRef={gridRef} filename="ccsp-schedule-114-1.png" />}
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <WeeklyGrid blocks={blocks} conflictKeys={conflictKeys} mode={mode} />
+        <div ref={gridRef}>
+          <WeeklyGrid blocks={blocks} conflictKeys={conflictKeys} mode={mode} />
+        </div>
         <ScheduleSidebar
           courses={courses}
           conflicts={conflicts}

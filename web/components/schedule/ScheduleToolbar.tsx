@@ -1,5 +1,6 @@
 "use client";
 
+import type React from "react";
 import {
   clearSchedule,
   setScheduleMode,
@@ -11,6 +12,7 @@ type Props = {
   mode: ScheduleMode;
   stats: ScheduleStats;
   conflictPairs: number;
+  exportButton?: React.ReactNode;
 };
 
 const MODE_HINT: Record<ScheduleMode, { label: string; hint: string; tone: string }> =
@@ -27,7 +29,7 @@ const MODE_HINT: Record<ScheduleMode, { label: string; hint: string; tone: strin
     },
   };
 
-export function ScheduleToolbar({ mode, stats, conflictPairs }: Props) {
+export function ScheduleToolbar({ mode, stats, conflictPairs, exportButton }: Props) {
   const hint = MODE_HINT[mode];
   return (
     <div className="rounded-lg border bg-[color:var(--color-surface)] p-4">
@@ -49,6 +51,7 @@ export function ScheduleToolbar({ mode, stats, conflictPairs }: Props) {
           >
             清空課表
           </button>
+          {exportButton}
         </div>
       </div>
 
