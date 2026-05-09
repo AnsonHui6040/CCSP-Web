@@ -357,3 +357,95 @@ export function getCourseWithDetails(
     return { course, detail: null };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Term availability & freshness
+
+export type AvailableTerm = {
+  year: number;
+  semester: 1 | 2;
+  courseCount: number;
+};
+
+/** Returns all (year, semester) pairs that have at least one course in the DB. */
+export function getAvailableTerms(): AvailableTerm[] {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT year, semester, COUNT(*) AS course_count
+         FROM courses
+        GROUP BY year, semester
+        ORDER BY year DESC, semester DESC`,
+    )
+    .all() as Array<{ year: number; semester: number; course_count: number }>;
+  return rows.map((r) => ({
+    year: r.year,
+    semester: r.semester as 1 | 2,
+    courseCount: r.course_count,
+  }));
+}
+
+export type TermFreshness = {
+  year: number;
+  semester: 1 | 2;
+  courseCount: number;
+  lastScrapedAt: string | null;   // ISO8601 UTC of the most recent scrape_runs row
+  status: "fresh" | "stale" | "missing";
+};
+
+/**
+ * Return freshness metadata for a given term.
+ * - missing: no courses at all
+ * - stale:   has courses, but last scrape was >7 days ago (or no scrape_runs record)
+ * - fresh:   has courses and last scrape was ≤7 days ago
+ */
+export function getTermDataFreshness(year: number, semester: 1 | 2): TermFreshness {
+  const db = getDb();
+  const courseCount = (
+    db
+      .prepare(`SELECT COUNT(*) AS n FROM courses WHERE year = ? AND semester = ?`)
+      .get(year, semester) as { n: number }
+  ).n;
+
+  if (courseCount === 0) {
+    return { year, semester: semester as 1 | 2, courseCount: 0, lastScrapedAt: null, status: "missing" };
+  }
+
+  // Use the most recent scraped_at from scrape_runs for this term
+  let lastScrapedAt: string | null = null;
+  try {
+    const runRow = db
+      .prepare(
+        `SELECT scraped_at FROM scrape_runs
+          WHERE year = ? AND semester = ?
+          ORDER BY scraped_at DESC LIMIT 1`,
+      )
+      .get(year, semester) as { scraped_at: string } | undefined;
+    lastScrapedAt = runRow?.scraped_at ?? null;
+  } catch {
+    // scrape_runs may be unavailable in tests; fall back to courses.scraped_at
+  }
+
+  if (!lastScrapedAt) {
+    // Fall back: most recent scraped_at among courses
+    const courseRow = db
+      .prepare(
+        `SELECT scraped_at FROM courses
+          WHERE year = ? AND semester = ?
+          ORDER BY scraped_at DESC LIMIT 1`,
+      )
+      .get(year, semester) as { scraped_at: string } | undefined;
+    lastScrapedAt = courseRow?.scraped_at ?? null;
+  }
+
+  let status: "fresh" | "stale" = "fresh";
+  if (lastScrapedAt) {
+    const ageDays =
+      (Date.now() - new Date(lastScrapedAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (ageDays > 7) status = "stale";
+  } else {
+    status = "stale"; // has courses but no timestamp — treat as stale
+  }
+
+  return { year, semester: semester as 1 | 2, courseCount, lastScrapedAt, status };
+}

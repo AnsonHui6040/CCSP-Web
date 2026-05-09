@@ -15,6 +15,7 @@ import type { Conflict, CourseLike } from "@/lib/conflict";
 import type { ScheduleStats } from "@/lib/scheduleStats";
 import { useCandidatePool } from "@/components/candidatePoolStore";
 import { ConflictList } from "./ConflictList";
+import { LoadAnsonSeedButton } from "./LoadAnsonSeedButton";
 import { NoTimeCourseList } from "./NoTimeCourseList";
 import { ScheduleStatsPanel } from "./ScheduleStatsPanel";
 
@@ -70,6 +71,8 @@ export function ScheduleSidebar(props: Props) {
       )}
       {tab === "notime" && <NoTimeCourseList courses={noTime} />}
       {tab === "stats" && <ScheduleStatsPanel stats={props.stats} />}
+
+      <LoadAnsonSeedButton />
     </aside>
   );
 }

@@ -13,6 +13,8 @@ type Props = {
   stats: ScheduleStats;
   conflictPairs: number;
   exportButton?: React.ReactNode;
+  /** Optional term label displayed under the heading e.g. "114 學年度第 2 學期" */
+  termLabel?: string;
 };
 
 const MODE_HINT: Record<ScheduleMode, { label: string; hint: string; tone: string }> =
@@ -29,7 +31,7 @@ const MODE_HINT: Record<ScheduleMode, { label: string; hint: string; tone: strin
     },
   };
 
-export function ScheduleToolbar({ mode, stats, conflictPairs, exportButton }: Props) {
+export function ScheduleToolbar({ mode, stats, conflictPairs, exportButton, termLabel }: Props) {
   const hint = MODE_HINT[mode];
   return (
     <div className="rounded-lg border bg-[color:var(--color-surface)] p-4">
@@ -39,6 +41,11 @@ export function ScheduleToolbar({ mode, stats, conflictPairs, exportButton }: Pr
           <p className="text-xs text-[color:var(--color-text-dim)]">
             候選池 → 課表 → 衝堂分析 → 正式確認
           </p>
+          {termLabel && (
+            <p className="mt-0.5 text-xs text-[color:var(--color-text-dim)]">
+              {termLabel}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <ModeButton current={mode} target="planning" />

@@ -1,10 +1,13 @@
 import { Suspense } from "react";
 import {
+  getAvailableTerms,
+  getTermDataFreshness,
   listDepartments,
   listTerms,
   searchCourses,
 } from "@/lib/queries";
 import type { Term } from "@/lib/types";
+import { inferCurrentAcademicTerm, termEquals } from "@/lib/terms";
 import { CourseCard } from "@/components/CourseCard";
 import { SearchForm } from "@/components/SearchForm";
 import { FilterSidebar } from "@/components/FilterSidebar";
@@ -34,13 +37,32 @@ export default async function CoursesPage({
 }) {
   const sp = await searchParams;
 
+  const availableTerms = getAvailableTerms();
   const terms = listTerms();
-  const fallbackTerm: Term = terms[0] ?? { year: 114, semester: 1 };
+  // Infer the current academic term from today's date
+  const inferredTerm = inferCurrentAcademicTerm(new Date());
+  // Pick default: inferred term if available in DB, otherwise first available
+  const availableInferred = availableTerms.find(
+    (t) => t.year === inferredTerm.year && t.semester === inferredTerm.semester,
+  );
+  const fallbackTerm: Term = availableInferred
+    ? { year: availableInferred.year, semester: availableInferred.semester }
+    : (terms[0] ?? { year: 114, semester: 1 });
+
   const term: Term = {
     year: pickInt(sp.year) ?? fallbackTerm.year,
     semester:
       ((pickInt(sp.sem) as 1 | 2) ?? fallbackTerm.semester) === 2 ? 2 : 1,
   };
+
+  const freshness = getTermDataFreshness(term.year, term.semester as 1 | 2);
+  // Show a warning when the user is viewing a term that is not the inferred
+  // current term AND the inferred current term exists in the DB.
+  const viewingOlderTerm =
+    !termEquals(term, inferredTerm) && availableInferred != null;
+  // Show a warning if the inferred current term is missing from the DB.
+  const currentTermMissing =
+    termEquals(term, inferredTerm) ? false : availableInferred == null;
 
   const q = pickStr(sp.q) ?? "";
   const deptCode = pickStr(sp.dept);
@@ -89,15 +111,44 @@ export default async function CoursesPage({
     <>
     <Navbar active="courses" />
     <main className="mx-auto max-w-7xl px-6 py-8">
-      <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">課程搜尋</h1>
           <p className="text-sm text-[color:var(--color-text-dim)]">
             東海大學 {term.year} 學年度 第 {term.semester} 學期
           </p>
+          {freshness.lastScrapedAt && (
+            <p className="mt-0.5 text-xs text-[color:var(--color-text-dim)]">
+              資料更新：{new Date(freshness.lastScrapedAt).toLocaleString("zh-TW", {
+                timeZone: "Asia/Taipei",
+                year: "numeric", month: "2-digit", day: "2-digit",
+                hour: "2-digit", minute: "2-digit",
+              })}　來源：course.thu.edu.tw
+              {freshness.status === "stale" && (
+                <span className="ml-2 text-[color:var(--color-warn,#b45309)]">（資料較舊）</span>
+              )}
+            </p>
+          )}
         </div>
         <TermSwitcher terms={terms} current={term} />
       </header>
+
+      {/* Warning: viewing an older term while a newer one is available */}
+      {viewingOlderTerm && (
+        <div className="mb-4 rounded-md border border-[color:var(--color-warn,#b45309)] bg-[color:var(--color-warn-bg,#451a03)] px-4 py-2.5 text-sm text-[color:var(--color-warn,#b45309)]">
+          目前顯示的是 {term.year}-{term.semester} 資料，可能不是目前學期（{inferredTerm.year}-{inferredTerm.semester}）。請切換學期以查看最新課程。
+        </div>
+      )}
+
+      {/* Warning: inferred current term not yet imported */}
+      {currentTermMissing && (
+        <div className="mb-4 rounded-md border border-[color:var(--color-warn,#b45309)] bg-[color:var(--color-warn-bg,#451a03)] px-4 py-2.5 text-sm text-[color:var(--color-warn,#b45309)]">
+          目前學期（{inferredTerm.year}-{inferredTerm.semester}）資料尚未匯入。請先執行：
+          <code className="ml-2 rounded bg-[color:var(--color-surface-2)] px-1.5 py-0.5 text-xs text-[color:var(--color-text)]">
+            python -m ccsp_importer.cli scrape --year {inferredTerm.year} --semester {inferredTerm.semester}
+          </code>
+        </div>
+      )}
 
       <div className="mb-5">
         <SearchForm initialQuery={q} />

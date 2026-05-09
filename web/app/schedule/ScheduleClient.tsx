@@ -28,6 +28,32 @@ export function ScheduleClient({ sharedCourses }: Props) {
   const { courses, mode, hydrated } = useSchedule();
   const gridRef = useRef<HTMLDivElement>(null);
 
+  // ---- term detection ----
+  // Collect distinct (year, semester) pairs from the loaded courses
+  const termGroups = useMemo(() => {
+    const seen = new Map<string, { year: number; semester: number; count: number }>();
+    for (const c of courses) {
+      const k = `${c.year}-${c.semester}`;
+      const existing = seen.get(k);
+      if (existing) existing.count++;
+      else seen.set(k, { year: c.year, semester: c.semester, count: 1 });
+    }
+    return [...seen.values()].sort((a, b) =>
+      b.year !== a.year ? b.year - a.year : b.semester - a.semester,
+    );
+  }, [courses]);
+
+  // The "dominant" term is the one with the most courses (or the first by year/semester)
+  const dominantTerm = termGroups[0] ?? null;
+  const hasMixedTerms = termGroups.length > 1;
+
+  // Build export filename from dominant term
+  const termSlug = dominantTerm
+    ? `${dominantTerm.year}-${dominantTerm.semester}`
+    : "unknown";
+  const pngFilename = `ccsp-schedule-${termSlug}.png`;
+  const pdfFilename = `ccsp-schedule-${termSlug}.pdf`;
+
   // Reference-link CourseLike adapters back to their persisted entry so
   // ConflictList can show rich info; conflict.ts compares by reference.
   const { courseLikes, linkBack } = useMemo(() => {
@@ -88,15 +114,23 @@ export function ScheduleClient({ sharedCourses }: Props) {
       {sharedCourses != null && (
         <ShareImportBanner sharedCourses={sharedCourses} />
       )}
+      {hasMixedTerms && (
+        <div className="rounded-md border border-[color:var(--color-warn,#b45309)] bg-[color:var(--color-warn-bg,#451a03)] px-4 py-2.5 text-sm text-[color:var(--color-warn,#b45309)]">
+          目前課表包含不同學期的課程（
+          {termGroups.map((t) => `${t.year}-${t.semester}`).join("、")}
+          ），請檢查是否混用了舊資料。
+        </div>
+      )}
       <ScheduleToolbar
         mode={mode}
         stats={stats}
         conflictPairs={conflicts.length}
+        termLabel={dominantTerm ? `${dominantTerm.year} 學年度第 ${dominantTerm.semester} 學期` : undefined}
         exportButton={
           <>
             <CopyShareLinkButton />
-            <ExportScheduleButton targetRef={gridRef} filename="ccsp-schedule-114-1.png" />
-            <ExportSchedulePdfButton targetRef={gridRef} filename="ccsp-schedule-114-1.pdf" />
+            <ExportScheduleButton targetRef={gridRef} filename={pngFilename} />
+            <ExportSchedulePdfButton targetRef={gridRef} filename={pdfFilename} />
           </>
         }
       />
