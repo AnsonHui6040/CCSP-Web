@@ -15,7 +15,6 @@ import type { Conflict, CourseLike } from "@/lib/conflict";
 import type { ScheduleStats } from "@/lib/scheduleStats";
 import { useCandidatePool } from "@/components/candidatePoolStore";
 import { ConflictList } from "./ConflictList";
-import { LoadAnsonSeedButton } from "./LoadAnsonSeedButton";
 import { NoTimeCourseList } from "./NoTimeCourseList";
 import { ScheduleStatsPanel } from "./ScheduleStatsPanel";
 
@@ -63,16 +62,20 @@ export function ScheduleSidebar(props: Props) {
         <ScheduledTab courses={props.courses} mode={props.mode} />
       )}
       {tab === "conflicts" && (
-        <ConflictList
-          conflicts={props.conflicts}
-          linkBack={props.linkBack}
-          mode={props.mode}
-        />
+        props.mode === "official" && props.conflicts.length === 0 ? (
+          <p className="rounded border border-dashed p-3 text-xs text-[color:var(--color-text-dim)]">
+            目前正式課表沒有衝堂。
+          </p>
+        ) : (
+          <ConflictList
+            conflicts={props.conflicts}
+            linkBack={props.linkBack}
+            mode={props.mode}
+          />
+        )
       )}
       {tab === "notime" && <NoTimeCourseList courses={noTime} />}
       {tab === "stats" && <ScheduleStatsPanel stats={props.stats} />}
-
-      <LoadAnsonSeedButton />
     </aside>
   );
 }

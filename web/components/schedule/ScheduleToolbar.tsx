@@ -17,29 +17,31 @@ type Props = {
   termLabel?: string;
 };
 
-const MODE_HINT: Record<ScheduleMode, { label: string; hint: string; tone: string }> =
-  {
-    planning: {
-      label: "預排模式",
-      hint: "預排模式允許衝堂，適合比較候選課程。",
-      tone: "text-[color:var(--color-warn)]",
-    },
-    official: {
-      label: "正式模式",
-      hint: "正式模式用於確認最終課表。衝堂課程不可確認。",
-      tone: "text-[color:var(--color-danger)]",
-    },
-  };
-
 export function ScheduleToolbar({ mode, stats, conflictPairs, exportButton, termLabel }: Props) {
-  const hint = MODE_HINT[mode];
+  // Build the mode status line shown under the stat grid.
+  let statusText: string | null = null;
+  let statusTone = "";
+  if (mode === "planning") {
+    statusText = "預排模式允許衝堂，適合比較候選課程。";
+    statusTone = "text-[color:var(--color-warn)]";
+  } else {
+    // official
+    if (conflictPairs > 0) {
+      statusText = "正式模式中仍有衝堂，請返回預排模式調整。";
+      statusTone = "text-[color:var(--color-danger)]";
+    }
+    // No message when official + no conflicts — the grid speaks for itself.
+  }
+
   return (
     <div className="rounded-lg border bg-[color:var(--color-surface)] p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold tracking-tight">我的預排課表</h1>
+          <h1 className="text-xl font-bold tracking-tight">我的課表</h1>
           <p className="text-xs text-[color:var(--color-text-dim)]">
-            候選池 → 課表 → 衝堂分析 → 正式確認
+            {mode === "planning"
+              ? "候選池 → 課表 → 衝堂分析 → 正式確認"
+              : "正式模式：用於確認最終課表"}
           </p>
           {termLabel && (
             <p className="mt-0.5 text-xs text-[color:var(--color-text-dim)]">
@@ -87,7 +89,9 @@ export function ScheduleToolbar({ mode, stats, conflictPairs, exportButton, term
         />
       </div>
 
-      <p className={`mt-3 text-xs ${hint.tone}`}>{hint.hint}</p>
+      {statusText && (
+        <p className={`mt-3 text-xs ${statusTone}`}>{statusText}</p>
+      )}
     </div>
   );
 }
@@ -100,6 +104,7 @@ function ModeButton({
   target: ScheduleMode;
 }) {
   const active = current === target;
+  const label = target === "planning" ? "預排模式" : "正式模式";
   return (
     <button
       onClick={() => setScheduleMode(target)}
@@ -109,7 +114,7 @@ function ModeButton({
           : "hover:border-[color:var(--color-text-dim)]"
       }`}
     >
-      {MODE_HINT[target].label}
+      {label}
     </button>
   );
 }

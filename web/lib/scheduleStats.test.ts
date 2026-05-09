@@ -183,10 +183,11 @@ describe("freePeriods", () => {
 // 5. period order sanity
 
 describe("PERIOD_ORDER", () => {
-  it("has the expected 15 entries with letter blocks at the end", () => {
-    expect(PERIOD_ORDER).toHaveLength(15);
-    expect(PERIOD_ORDER[12]).toBe("13");
-    expect(PERIOD_ORDER[13]).toBe("A");
-    expect(PERIOD_ORDER[14]).toBe("B");
+  it("has the expected 16 entries: 0..13 then A, B", () => {
+    expect(PERIOD_ORDER).toHaveLength(16);
+    expect(PERIOD_ORDER[0]).toBe("0");
+    expect(PERIOD_ORDER[13]).toBe("13");
+    expect(PERIOD_ORDER[14]).toBe("A");
+    expect(PERIOD_ORDER[15]).toBe("B");
   });
 });

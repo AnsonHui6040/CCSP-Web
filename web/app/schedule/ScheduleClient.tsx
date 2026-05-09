@@ -89,6 +89,12 @@ export function ScheduleClient({ sharedCourses }: Props) {
     [courses, conflicts, mode],
   );
 
+  // Courses with no time slots — shown in the 未排定時間 grid column.
+  const noTimeCourses = useMemo(
+    () => courses.filter((c) => c.snapshot.timeSlots.length === 0),
+    [courses],
+  );
+
   const stats = useMemo(
     () =>
       computeStats(
@@ -136,7 +142,7 @@ export function ScheduleClient({ sharedCourses }: Props) {
       />
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div ref={gridRef}>
-          <WeeklyGrid blocks={blocks} conflictKeys={conflictKeys} mode={mode} />
+          <WeeklyGrid blocks={blocks} conflictKeys={conflictKeys} mode={mode} noTimeCourses={noTimeCourses} />
         </div>
         <ScheduleSidebar
           courses={courses}

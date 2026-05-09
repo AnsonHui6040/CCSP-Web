@@ -9,6 +9,7 @@ import type { TimeSlot } from "./types";
 import { normalizePeriod, normalizeWeekday } from "./conflict";
 
 export const PERIOD_ORDER = [
+  "0",
   "1",
   "2",
   "3",
