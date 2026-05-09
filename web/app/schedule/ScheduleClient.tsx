@@ -5,13 +5,26 @@ import { findAllConflicts, type CourseLike } from "@/lib/conflict";
 import { buildScheduleLayoutBlocks } from "@/lib/scheduleLayout";
 import { computeStats } from "@/lib/scheduleStats";
 import { useSchedule, type StoredScheduleCourse } from "@/lib/scheduleStore";
-import { ScheduleSidebar } from "@/components/schedule/ScheduleSidebar";
-import { ScheduleToolbar } from "@/components/schedule/ScheduleToolbar";
-import { WeeklyGrid } from "@/components/schedule/WeeklyGrid";
+import { CopyShareLinkButton } from "@/components/schedule/CopyShareLinkButton";
 import { ExportScheduleButton } from "@/components/schedule/ExportScheduleButton";
 import { ExportSchedulePdfButton } from "@/components/schedule/ExportSchedulePdfButton";
+import { ScheduleSidebar } from "@/components/schedule/ScheduleSidebar";
+import { ScheduleToolbar } from "@/components/schedule/ScheduleToolbar";
+import { ShareImportBanner } from "@/components/schedule/ShareImportBanner";
+import { WeeklyGrid } from "@/components/schedule/WeeklyGrid";
+import type { Course } from "@/lib/types";
 
-export function ScheduleClient() {
+type SharedCourseResult = {
+  course: Course;
+  status: "planned" | "confirmed";
+};
+
+type Props = {
+  /** Resolved courses from the ?share= URL param. null = no share param present. */
+  sharedCourses?: SharedCourseResult[] | null;
+};
+
+export function ScheduleClient({ sharedCourses }: Props) {
   const { courses, mode, hydrated } = useSchedule();
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -72,12 +85,16 @@ export function ScheduleClient() {
 
   return (
     <div className="space-y-4">
+      {sharedCourses != null && (
+        <ShareImportBanner sharedCourses={sharedCourses} />
+      )}
       <ScheduleToolbar
         mode={mode}
         stats={stats}
         conflictPairs={conflicts.length}
         exportButton={
           <>
+            <CopyShareLinkButton />
             <ExportScheduleButton targetRef={gridRef} filename="ccsp-schedule-114-1.png" />
             <ExportSchedulePdfButton targetRef={gridRef} filename="ccsp-schedule-114-1.pdf" />
           </>

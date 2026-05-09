@@ -277,6 +277,33 @@ export function useSchedule() {
   };
 }
 
+/**
+ * Replace the entire schedule with courses imported from a share link.
+ * Preserves the current mode (planning / official).
+ */
+export function replaceScheduleFromShared(
+  entries: Array<{
+    courseCode: string;
+    year: number;
+    semester: number;
+    status: ScheduleCourseStatus;
+    snapshot: StoredCourseSnapshot;
+  }>,
+): void {
+  const state = readState();
+  const now = new Date().toISOString();
+  const courses: StoredScheduleCourse[] = entries.map((e) => ({
+    courseCode: e.courseCode,
+    year: e.year,
+    semester: e.semester,
+    status: e.status,
+    addedAt: now,
+    updatedAt: now,
+    snapshot: e.snapshot,
+  }));
+  writeState({ ...state, courses });
+}
+
 // ---------------------------------------------------------------------------
 // internals
 

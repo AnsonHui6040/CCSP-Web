@@ -233,6 +233,32 @@ export function getCourseByCode(
   return row ? rowToCourse(row) : null;
 }
 
+/**
+ * Batch-fetch courses for the share-link import flow.
+ * For each key, returns {course, status} when found, omits missing ones silently.
+ */
+export function getCoursesByKeys(
+  keys: Array<{
+    year: number;
+    semester: number;
+    courseCode: string;
+    status: "planned" | "confirmed";
+  }>,
+): Array<{ course: Course; status: "planned" | "confirmed" }> {
+  const db = getDb();
+  const stmt = db.prepare(
+    `SELECT ${COLUMNS} FROM courses WHERE year = ? AND semester = ? AND course_code = ?`,
+  );
+  const results: Array<{ course: Course; status: "planned" | "confirmed" }> = [];
+  for (const k of keys) {
+    const row = stmt.get(k.year, k.semester, k.courseCode) as
+      | Record<string, unknown>
+      | undefined;
+    if (row) results.push({ course: rowToCourse(row), status: k.status });
+  }
+  return results;
+}
+
 // ---------------------------------------------------------------------------
 // course_details — Phase 4
 
