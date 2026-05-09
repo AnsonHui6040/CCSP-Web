@@ -779,6 +779,28 @@ BeautifulSoup `descendants` 不會為 void elements 吐 text。早期 raw_text �
 
 當你開新 bash session 切到子目錄後忘記回 root，後續 SQLite 路徑會錯。**用 `cd /c/Users/anson/Documents/GitHub/CCSP-Web && ...`** 重設 cwd。
 
+### 12.11 Dev mode JSON.parse / memory allocation 暫態錯誤
+
+現象：
+- `/courses/114/1/0001` 曾在 Next.js dev mode 熱重載期間出現一次 `SyntaxError: Unexpected end of JSON input`
+- 同時 Windows 曾出現 `RangeError: Failed to allocate memory` / `ERR_MEMORY_ALLOCATION_FAILED`
+
+排查結果：
+- `web/lib/queries.ts` 的 `JSON.parse` 都有 `safeParseArray` / `safeParseObject` 保護
+- `course_details` 中 0001 的 `grading_policy_json`、`raw_sections_json`、`teachers_json`、`teaching_assistants_json` 都可正常 parse
+- 全資料庫 JSON 欄位（2893 筆）掃描正常
+- WAL checkpoint 正常（log=654, checkpointed=654）
+- 重啟 dev server 後 `/courses/114/1/0001` 正常 200
+- 教材欄位為空時不顯示「教材」卡片，參考書目正常顯示
+
+結論：不是資料庫 JSON 損壞，也不是課程詳細頁程式碼 bug。較可能是 Next.js dev mode 熱重載期間的暫態競態條件，加上 Windows VirtualAlloc 記憶體壓力（同時開多個 Node.js 進程）。
+
+處理建議：
+1. 先重啟 dev server，大多數情況會自動恢復。
+2. 若仍出現，再執行 `python scan_json.py` 掃描 `course_details` JSON 欄位。
+3. 不要直接重寫 `queries.ts` 或 `detail page`。
+4. 若要進一步防護，只能加更嚴格的 safe parse wrapper，不要大改資料流。
+
 ---
 
 ## 附：起手式建議
