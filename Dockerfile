@@ -38,7 +38,7 @@ RUN python3 -m venv /app/importer/.venv \
 FROM base AS node-deps
 
 COPY web/package.json web/package-lock.json ./web/
-RUN cd web && npm ci --omit=dev
+RUN cd web && npm ci
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage: build Next.js
@@ -74,6 +74,7 @@ RUN chmod +x /app/scripts/*.sh
 # Next.js standalone output + static assets
 COPY --from=builder /app/web/.next/standalone ./web/
 COPY --from=builder /app/web/.next/static     ./web/.next/static
+COPY --from=builder /app/web/public           ./web/public
 
 # ── Runtime environment ──────────────────────────────────────────────────────
 ENV NODE_ENV=production
