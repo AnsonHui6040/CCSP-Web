@@ -4,6 +4,7 @@ from __future__ import annotations
 import csv
 import io
 import logging
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Optional
@@ -60,12 +61,12 @@ def _load_csv_text(
 
 
 def _parse_dept_index(csv_text: str) -> List[DeptIndexEntry]:
-    reader = csv.DictReader(io.StringIO(csv_text))
+    reader = csv.reader(io.StringIO(csv_text))
     seen: dict[str, str] = {}
-    code_field, name_field = _resolve_field_names(reader.fieldnames or [])
+    header = next(reader, None) or []
+    code_idx, name_idx = _resolve_field_indexes(header)
     for row in reader:
-        code = (row.get(code_field) or "").strip()
-        name = (row.get(name_field) or "").strip()
+        code, name = _dept_fields_from_row(row, code_idx=code_idx, name_idx=name_idx)
         if code and code not in seen:
             seen[code] = name
     entries = [DeptIndexEntry(dept_code=c, dept_name=n) for c, n in sorted(seen.items())]
@@ -73,16 +74,41 @@ def _parse_dept_index(csv_text: str) -> List[DeptIndexEntry]:
     return entries
 
 
-def _resolve_field_names(fieldnames: Iterable[str]) -> tuple[str, str]:
+def _resolve_field_indexes(fieldnames: Iterable[str]) -> tuple[int, int]:
     """The CSV header is in Chinese; resolve the two columns we care about."""
     code, name = None, None
-    for fn in fieldnames:
+    field_list = list(fieldnames)
+    for i, fn in enumerate(field_list):
         if fn == "開課系所代碼":
-            code = fn
+            code = i
         elif fn == "開課系所名稱":
-            name = fn
+            name = i
     if code is None or name is None:
         raise ValueError(
-            f"opendata CSV missing dept columns; got header={list(fieldnames)!r}"
+            f"opendata CSV missing dept columns; got header={field_list!r}"
         )
+    return code, name
+
+
+_DEPT_CODE_RE = re.compile(r"^(?:\d{3}|[A-Z]\d{2})$")
+
+
+def _dept_fields_from_row(row: list[str], *, code_idx: int, name_idx: int) -> tuple[str, str]:
+    """Return dept fields, tolerating unquoted commas in the course name.
+
+    The THU opendata export occasionally emits English course names containing
+    commas without CSV quotes. The columns after course name are fixed, so when
+    a row is wider than the header we recover dept_code/dept_name from the
+    right-hand side instead of trusting shifted indexes.
+    """
+    if len(row) >= 9 and len(row) > name_idx + 4:
+        code = row[-5].strip()
+        name = row[-4].strip()
+    else:
+        code = row[code_idx].strip() if code_idx < len(row) else ""
+        name = row[name_idx].strip() if name_idx < len(row) else ""
+
+    if code and not _DEPT_CODE_RE.fullmatch(code):
+        log.warning("Skipping malformed opendata dept code %r in row %r", code, row)
+        return "", ""
     return code, name
