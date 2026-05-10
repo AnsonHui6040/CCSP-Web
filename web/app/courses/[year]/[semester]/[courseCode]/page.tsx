@@ -4,7 +4,6 @@ import { Navbar } from "@/components/Navbar";
 import { BackButton } from "@/components/BackButton";
 import { CourseDetailActions } from "@/components/CourseDetailActions";
 import { CourseDetailRefreshButton } from "@/components/CourseDetailRefreshButton";
-import { Contributors } from "@/components/Contributors";
 import { getCourseWithDetails } from "@/lib/queries";
 import { TAG_DEFS_BY_KEY, sortTagKeys } from "@/lib/tags";
 import {
@@ -58,34 +57,29 @@ export default async function CourseDetailPage({
         />
 
         <header className="rounded-lg border bg-[color:var(--color-surface)] p-5">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-baseline gap-2">
-                <span className="font-mono text-xs text-[color:var(--color-text-dim)]">
-                  {course.year}-{course.semester} · {course.courseCode}
-                </span>
-                {course.requiredOrElective && (
-                  <span className="rounded border bg-[color:var(--color-surface-2)] px-1.5 py-0.5 text-[10px]">
-                    {course.requiredOrElective}
-                  </span>
-                )}
-                {course.deptName && (
-                  <span className="rounded border px-1.5 py-0.5 text-[10px] text-[color:var(--color-text-dim)]">
-                    {course.deptName}
-                  </span>
-                )}
-              </div>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight">
-                {course.courseName}
-              </h1>
-              {course.courseNameEn && (
-                <p className="text-sm text-[color:var(--color-text-dim)]">
-                  {course.courseNameEn}
-                </p>
-              )}
-            </div>
-            <Contributors />
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="font-mono text-xs text-[color:var(--color-text-dim)]">
+              {course.year}-{course.semester} · {course.courseCode}
+            </span>
+            {course.requiredOrElective && (
+              <span className="rounded border bg-[color:var(--color-surface-2)] px-1.5 py-0.5 text-[10px]">
+                {course.requiredOrElective}
+              </span>
+            )}
+            {course.deptName && (
+              <span className="rounded border px-1.5 py-0.5 text-[10px] text-[color:var(--color-text-dim)]">
+                {course.deptName}
+              </span>
+            )}
           </div>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight">
+            {course.courseName}
+          </h1>
+          {course.courseNameEn && (
+            <p className="text-sm text-[color:var(--color-text-dim)]">
+              {course.courseNameEn}
+            </p>
+          )}
 
           {course.tags.length > 0 && (
             <div className="mt-3 flex flex-wrap gap-1.5">

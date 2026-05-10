@@ -7,7 +7,6 @@ import {
   type ScheduleMode,
 } from "@/lib/scheduleStore";
 import type { ScheduleStats } from "@/lib/scheduleStats";
-import { Contributors } from "@/components/Contributors";
 
 type Props = {
   mode: ScheduleMode;
@@ -53,21 +52,18 @@ export function ScheduleToolbar({ mode, stats, conflictPairs, exportButton, term
             </p>
           )}
         </div>
-        <div className="flex flex-col items-start gap-2 sm:items-end">
-          <Contributors />
-          <div className="flex flex-wrap items-center gap-1.5">
-            <ModeButton current={mode} target="planning" />
-            <ModeButton current={mode} target="official" />
-            <button
-              onClick={() => {
-                if (confirm("確定要清空整個課表嗎？")) clearSchedule();
-              }}
-              className="rounded border px-2.5 py-1 text-xs text-[color:var(--color-text-dim)] hover:border-[color:var(--color-danger)] hover:text-[color:var(--color-danger)]"
-            >
-              清空課表
-            </button>
-            {exportButton}
-          </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <ModeButton current={mode} target="planning" />
+          <ModeButton current={mode} target="official" />
+          <button
+            onClick={() => {
+              if (confirm("確定要清空整個課表嗎？")) clearSchedule();
+            }}
+            className="rounded border px-2.5 py-1 text-xs text-[color:var(--color-text-dim)] hover:border-[color:var(--color-danger)] hover:text-[color:var(--color-danger)]"
+          >
+            清空課表
+          </button>
+          {exportButton}
         </div>
       </div>
 

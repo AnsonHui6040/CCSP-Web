@@ -4,28 +4,18 @@ import { Contributors } from "@/components/Contributors";
 const TUTORIAL_STEPS = [
   {
     src: "/tutorial/step-1.png",
-    title: "進入課程搜尋",
-    text: "確認目前學期，輸入課程名稱、教師或選課代碼開始查找。",
   },
   {
     src: "/tutorial/step-2.png",
-    title: "篩選並加入候選",
-    text: "使用左側條件縮小範圍，看到想保留的課程即可加入候選。",
   },
   {
     src: "/tutorial/step-3.png",
-    title: "查看課程詳細",
-    text: "進入詳細頁確認教師、學分、名額、備註與限制。",
   },
   {
     src: "/tutorial/step-4.png",
-    title: "預排我的課表",
-    text: "在預排模式比較課程安排，搭配右側分頁整理候選與衝堂。",
   },
   {
     src: "/tutorial/step-5.png",
-    title: "切換正式模式並匯出",
-    text: "完成安排後切到正式模式，匯出 PNG、PDF 或分享連結。",
   },
 ] as const;
 
@@ -67,30 +57,18 @@ export default function Home() {
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
           <div>
             <h2 className="text-2xl font-bold tracking-tight">使用教學</h2>
-            <p className="mt-1 text-sm text-[color:var(--color-text-dim)]">
-              由搜尋、候選、詳細確認到課表匯出，一次看懂主要流程。
-            </p>
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-6">
           {TUTORIAL_STEPS.map((step, index) => (
-            <article
-              key={step.src}
-              className={index === 0 ? "md:col-span-2" : undefined}
-            >
+            <article key={step.src}>
               <div className="overflow-hidden rounded-lg border bg-[color:var(--color-surface)]">
                 <img
                   src={step.src}
-                  alt={`CCSP Web 使用教學：${step.title}`}
-                  className="aspect-video w-full object-cover"
+                  alt={`CCSP Web 使用教學 Step ${index + 1}`}
+                  className="w-full"
                 />
-                <div className="p-4">
-                  <h3 className="font-semibold">{step.title}</h3>
-                  <p className="mt-1 text-sm text-[color:var(--color-text-dim)]">
-                    {step.text}
-                  </p>
-                </div>
               </div>
             </article>
           ))}
