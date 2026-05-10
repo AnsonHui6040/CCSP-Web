@@ -7,6 +7,27 @@ CCSP Web 是一個基於公開課程資料的課程查詢、候選課程整理�
 
 Currently targeting: **Tunghai University** (東海大學) — [course.thu.edu.tw](https://course.thu.edu.tw/)
 
+## Creators / 製作者
+
+- [AnsonHui6040](https://github.com/AnsonHui6040)
+- [MrLongMo](https://github.com/MrLongMo)
+
+## Production Statement / 製作聲明
+
+CCSP Web is a student-oriented course search and schedule planning project created for learning, reference, and personal timetable planning. It is independently developed and maintained by the creators listed above.
+
+CCSP Web 是由上述製作者共同製作的選課查詢與課表規劃工具，目的為協助學生整理公開課程資訊、建立候選課程與預排課表。本專案為獨立製作，並非學校官方系統或官方服務。
+
+## Legal Disclaimer / 法律免責聲明
+
+This project is provided for informational and planning purposes only. Course availability, quota, classroom, schedule, teacher, grading policy, syllabus, and all other academic information may change without notice. Users must verify final and official information through Tunghai University's official course selection and academic systems.
+
+本專案資料僅供查詢、整理與課表規劃參考。課程名額、時間、教室、教師、評分方式、授課大綱及其他教務資訊均可能異動；所有正式資訊與選課結果，應以東海大學官方系統與公告為準。
+
+This project does not provide course registration, does not guarantee successful enrollment, does not represent Tunghai University, and does not assume responsibility for losses, missed registration opportunities, schedule conflicts, data errors, or decisions made based on this tool.
+
+本專案不提供自動選課、加退選或登入學校系統功能，不保證選課成功，不代表東海大學立場，亦不對因使用本工具所造成之資料誤差、選課判斷、衝堂、未成功選課或其他損失負責。
+
 ---
 
 ## 1. Project Overview
@@ -21,8 +42,8 @@ CCSP Web helps students search courses, build a candidate pool, plan their weekl
 
 This project does **not** log into the university system, does **not** perform automated registration, and does **not** bypass any authentication or access control.
 
-> This project is not affiliated with or endorsed by Tunghai University.  
-> 本專案並非東海大學官方服務，亦不代表學校立場。
+> CCSP Web is not affiliated with, sponsored by, or endorsed by Tunghai University.  
+> CCSP Web 並非東海大學官方服務，亦不代表學校立場。
 
 ---
 
@@ -68,7 +89,7 @@ This project does **not** log into the university system, does **not** perform a
 
 Course data is for reference and planning purposes only. Actual registration results are determined by the university's official system.
 
-This project is not affiliated with or endorsed by Tunghai University.
+This project is not affiliated with, sponsored by, or endorsed by Tunghai University.
 
 ---
 
@@ -229,4 +250,3 @@ Export content reflects the currently active mode (planning or official).
 ## 13. License
 
 This project currently has no explicit license. Please contact the maintainer before reuse.
-

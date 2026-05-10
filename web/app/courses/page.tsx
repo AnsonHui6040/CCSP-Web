@@ -15,6 +15,7 @@ import { TermSwitcher } from "@/components/TermSwitcher";
 import { CandidatePoolPanel } from "@/components/CandidatePoolPanel";
 import { CourseListScroll } from "@/components/CourseListScroll";
 import { Navbar } from "@/components/Navbar";
+import { Contributors } from "@/components/Contributors";
 
 export const dynamic = "force-dynamic";
 
@@ -140,7 +141,10 @@ export default async function CoursesPage({
             </p>
           )}
         </div>
-        <TermSwitcher terms={terms} current={term} />
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <Contributors />
+          <TermSwitcher terms={terms} current={term} />
+        </div>
       </header>
 
       {/* Warning: viewing an older term while a newer one is available */}
