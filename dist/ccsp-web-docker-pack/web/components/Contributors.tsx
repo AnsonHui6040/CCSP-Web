@@ -9,6 +9,11 @@ const CONTRIBUTORS = [
   },
 ] as const;
 
+const PROJECT = {
+  name: "CCSP-Web",
+  href: "https://github.com/AnsonHui6040/CCSP-Web",
+} as const;
+
 type Props = {
   className?: string;
 };
@@ -32,6 +37,15 @@ export function Contributors({ className = "" }: Props) {
           <span>{person.name}</span>
         </a>
       ))}
+      <a
+        href={PROJECT.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex h-8 items-center gap-1.5 rounded border bg-[color:var(--color-surface-2)] px-2.5 transition hover:border-[color:var(--color-accent)] hover:text-[color:var(--color-accent)]"
+      >
+        <GitHubIcon />
+        <span>{PROJECT.name}</span>
+      </a>
     </div>
   );
 }
