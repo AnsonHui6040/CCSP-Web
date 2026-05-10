@@ -1,0 +1,451 @@
+import "server-only";
+import type { SQLInputValue } from "node:sqlite";
+import { getDb } from "./db";
+import type { TagKey, TagLevel } from "./tags";
+import type {
+  Course,
+  CourseDetail,
+  CourseSearchParams,
+  CourseWithDetails,
+  GradingPolicyEntry,
+  Rule,
+  Teacher,
+  Term,
+  TimeSlot,
+  Warning,
+} from "./types";
+
+/** Map a SQLite row to a typed Course. */
+function rowToCourse(row: Record<string, unknown>): Course {
+  const teachers = safeParseArray<Teacher>(row.teachers_json);
+  const timeSlots = safeParseArray<TimeSlot>(row.time_slots_json);
+  const tags = safeParseArray<string>(row.tags_json) as TagKey[];
+  const warnings = safeParseArray<Warning>(row.warnings_json);
+  const rules = safeParseArray<Rule>(row.rules_json);
+  const riskRaw = (row.risk_level as string | null) ?? "low";
+  const riskLevel: TagLevel =
+    riskRaw === "high" || riskRaw === "medium" ? riskRaw : "low";
+  return {
+    id: row.id as number,
+    year: row.year as number,
+    semester: row.semester as number,
+    courseCode: row.course_code as string,
+    courseName: row.course_name as string,
+    courseNameEn: (row.course_name_en as string | null) ?? null,
+    requiredOrElective: (row.required_or_elective as string | null) ?? null,
+    creditsRaw: (row.credits_raw as string | null) ?? null,
+    creditsLecture: (row.credits_lecture as number | null) ?? null,
+    creditsLab: (row.credits_lab as number | null) ?? null,
+    creditsTotal: (row.credits_total as number | null) ?? null,
+    deptCode: (row.dept_code as string | null) ?? null,
+    deptName: (row.dept_name as string | null) ?? null,
+    teachers,
+    timeRaw: (row.time_raw as string | null) ?? null,
+    timeSlots,
+    capacity: (row.capacity as number | null) ?? null,
+    enrolled: (row.enrolled as number | null) ?? null,
+    remaining: (row.remaining as number | null) ?? null,
+    rawNote: (row.raw_note as string | null) ?? null,
+    courseProfileId: (row.course_profile_id as string | null) ?? null,
+    scrapedAt: row.scraped_at as string,
+    tags,
+    warnings,
+    rules,
+    riskLevel,
+  };
+}
+
+function safeParseArray<T>(json: unknown): T[] {
+  if (typeof json !== "string" || !json) return [];
+  try {
+    const parsed = JSON.parse(json);
+    return Array.isArray(parsed) ? (parsed as T[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+// ---------------------------------------------------------------------------
+// queries
+
+export type CourseListResult = {
+  rows: Course[];
+  total: number;
+};
+
+const COLUMNS = [
+  "id",
+  "year",
+  "semester",
+  "course_code",
+  "course_name",
+  "course_name_en",
+  "required_or_elective",
+  "credits_raw",
+  "credits_lecture",
+  "credits_lab",
+  "credits_total",
+  "dept_code",
+  "dept_name",
+  "teachers_json",
+  "time_raw",
+  "time_slots_json",
+  "capacity",
+  "enrolled",
+  "remaining",
+  "raw_note",
+  "course_profile_id",
+  "scraped_at",
+  "tags_json",
+  "warnings_json",
+  "rules_json",
+  "risk_level",
+].join(", ");
+
+/** Search courses with filters. SQLite LIKE is good enough for V1. */
+export function searchCourses(params: CourseSearchParams): CourseListResult {
+  const db = getDb();
+  const where: string[] = [];
+  const args: SQLInputValue[] = [];
+
+  if (params.year !== undefined) {
+    where.push("year = ?");
+    args.push(params.year);
+  }
+  if (params.semester !== undefined) {
+    where.push("semester = ?");
+    args.push(params.semester);
+  }
+  if (params.deptCode) {
+    where.push("dept_code = ?");
+    args.push(params.deptCode);
+  }
+  if (params.requiredOnly) {
+    where.push("required_or_elective LIKE '%必%'");
+  }
+  if (params.hasOpening) {
+    // Treat NULL as "unknown / probably full" — the THU page hides 餘額
+    // when enrolled > capacity, which is exactly the case users do *not*
+    // want surfaced under 尚有名額.
+    where.push("remaining > 0");
+  }
+  if (params.weekday !== undefined) {
+    // Match any time slot with this weekday. JSON stored as text — use LIKE.
+    where.push("time_slots_json LIKE ?");
+    args.push(`%"weekday": ${params.weekday}%`);
+  }
+  if (params.q) {
+    const q = `%${params.q}%`;
+    where.push(
+      "(course_name LIKE ? OR course_name_en LIKE ? OR course_code LIKE ? OR teachers_json LIKE ?)",
+    );
+    args.push(q, q, q, q);
+  }
+
+  // Tag-based filters. The tag list is short and tags are stored as a JSON
+  // array in tags_json, so substring LIKE on the JSON is fine for V1
+  // (no FTS, no JSON1 tax).
+  function tagPresent(key: string) {
+    return `tags_json LIKE '%"${key}"%'`;
+  }
+  if (params.englishTaught) where.push(tagPresent("english_taught"));
+  if (params.remote) where.push(tagPresent("remote"));
+  if (params.restrictedOnly) where.push(tagPresent("restricted"));
+  if (params.hideNoOnline) where.push(`NOT (${tagPresent("online_selection_unavailable")})`);
+  if (params.hideManual) where.push(`NOT (${tagPresent("manual_selection_required")})`);
+  if (params.hideNotCountGraduation)
+    where.push(`NOT (${tagPresent("not_count_graduation")})`);
+  if (params.riskLevel) {
+    where.push("risk_level = ?");
+    args.push(params.riskLevel);
+  }
+
+  const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
+  const limit = Math.min(params.limit ?? 100, 500);
+  const offset = params.offset ?? 0;
+
+  const rowsStmt = db.prepare(
+    `SELECT ${COLUMNS} FROM courses ${whereSql}
+     ORDER BY year DESC, semester DESC, course_code ASC
+     LIMIT ? OFFSET ?`,
+  );
+  const rows = (rowsStmt.all(...args, limit, offset) as Record<string, unknown>[]).map(
+    rowToCourse,
+  );
+
+  const totalStmt = db.prepare(
+    `SELECT COUNT(*) AS n FROM courses ${whereSql}`,
+  );
+  const total = (totalStmt.get(...args) as { n: number }).n;
+
+  return { rows, total };
+}
+
+/** Used by the term switcher and dept dropdown. */
+export function listTerms(): Term[] {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT DISTINCT year, semester FROM courses ORDER BY year DESC, semester DESC`,
+    )
+    .all() as Array<{ year: number; semester: 1 | 2 }>;
+  // Plain-object copy so React can serialize when this is passed to a
+  // client component (TermSwitcher).
+  return rows.map((r) => ({ year: r.year, semester: r.semester }));
+}
+
+export function listDepartments(term: Term): Array<{
+  code: string;
+  name: string;
+  count: number;
+}> {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT dept_code AS code, dept_name AS name, COUNT(*) AS count
+         FROM courses
+        WHERE year = ? AND semester = ? AND dept_code IS NOT NULL
+        GROUP BY dept_code, dept_name
+        ORDER BY dept_code`,
+    )
+    .all(term.year, term.semester) as Array<{
+    code: string;
+    name: string;
+    count: number;
+  }>;
+  // node:sqlite rows have a non-plain prototype, which React 19 refuses to
+  // serialize across the server→client boundary. Spread to plain objects.
+  return rows.map((r) => ({ code: r.code, name: r.name, count: r.count }));
+}
+
+export function getCourseByCode(
+  term: Term,
+  courseCode: string,
+): Course | null {
+  const db = getDb();
+  const row = db
+    .prepare(
+      `SELECT ${COLUMNS} FROM courses WHERE year = ? AND semester = ? AND course_code = ?`,
+    )
+    .get(term.year, term.semester, courseCode) as
+    | Record<string, unknown>
+    | undefined;
+  return row ? rowToCourse(row) : null;
+}
+
+/**
+ * Batch-fetch courses for the share-link import flow.
+ * For each key, returns {course, status} when found, omits missing ones silently.
+ */
+export function getCoursesByKeys(
+  keys: Array<{
+    year: number;
+    semester: number;
+    courseCode: string;
+    status: "planned" | "confirmed";
+  }>,
+): Array<{ course: Course; status: "planned" | "confirmed" }> {
+  const db = getDb();
+  const stmt = db.prepare(
+    `SELECT ${COLUMNS} FROM courses WHERE year = ? AND semester = ? AND course_code = ?`,
+  );
+  const results: Array<{ course: Course; status: "planned" | "confirmed" }> = [];
+  for (const k of keys) {
+    const row = stmt.get(k.year, k.semester, k.courseCode) as
+      | Record<string, unknown>
+      | undefined;
+    if (row) results.push({ course: rowToCourse(row), status: k.status });
+  }
+  return results;
+}
+
+// ---------------------------------------------------------------------------
+// course_details — Phase 4
+
+const DETAIL_COLUMNS = [
+  "detail_url",
+  "course_description",
+  "teaching_goal",
+  "grading_policy_json",
+  "textbook",
+  "reference_books",
+  "office_hour",
+  "syllabus_url",
+  "detailed_note",
+  "teachers_json",
+  "teaching_assistants_json",
+  "raw_sections_json",
+  "fetched_at",
+  "parser_version",
+  "fetch_status",
+  "error_message",
+].join(", ");
+
+function rowToDetail(row: Record<string, unknown> | undefined): CourseDetail | null {
+  if (!row) return null;
+  const status = (row.fetch_status as string | null) ?? null;
+  return {
+    detailUrl: (row.detail_url as string | null) ?? null,
+    courseDescription: (row.course_description as string | null) ?? null,
+    teachingGoal: (row.teaching_goal as string | null) ?? null,
+    gradingPolicy: safeParseArray<GradingPolicyEntry>(row.grading_policy_json),
+    textbook: (row.textbook as string | null) ?? null,
+    referenceBooks: (row.reference_books as string | null) ?? null,
+    officeHour: (row.office_hour as string | null) ?? null,
+    syllabusUrl: (row.syllabus_url as string | null) ?? null,
+    detailedNote: (row.detailed_note as string | null) ?? null,
+    teachers: safeParseArray<Teacher>(row.teachers_json),
+    teachingAssistants: safeParseArray<{ name: string }>(
+      row.teaching_assistants_json,
+    ),
+    rawSections: safeParseObject(row.raw_sections_json),
+    fetchStatus: isKnownStatus(status) ? status : null,
+    fetchedAt: (row.fetched_at as string | null) ?? null,
+    parserVersion: (row.parser_version as string | null) ?? null,
+    errorMessage: (row.error_message as string | null) ?? null,
+  };
+}
+
+function isKnownStatus(s: string | null): s is CourseDetail["fetchStatus"] {
+  return (
+    s === "success" ||
+    s === "skipped" ||
+    s === "parse_error" ||
+    s === "http_error" ||
+    s === "not_found"
+  );
+}
+
+function safeParseObject(json: unknown): Record<string, string> {
+  if (typeof json !== "string" || !json) return {};
+  try {
+    const parsed = JSON.parse(json);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, string>;
+    }
+    return {};
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Fetch one course's basic data + (optionally) its detail row.
+ * Detail join is left-outer: a course may exist without a detail row.
+ * Returns null only when the course itself isn't in the database.
+ */
+export function getCourseWithDetails(
+  term: Term,
+  courseCode: string,
+): CourseWithDetails | null {
+  const course = getCourseByCode(term, courseCode);
+  if (!course) return null;
+  const db = getDb();
+  try {
+    const row = db
+      .prepare(
+        `SELECT ${DETAIL_COLUMNS} FROM course_details
+          WHERE year = ? AND semester = ? AND course_code = ?`,
+      )
+      .get(term.year, term.semester, courseCode) as
+      | Record<string, unknown>
+      | undefined;
+    return { course, detail: rowToDetail(row) };
+  } catch {
+    // course_details table may not exist yet (older DB without the
+    // Phase-4 migration). Don't crash — show the basic course card.
+    return { course, detail: null };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Term availability & freshness
+
+export type AvailableTerm = {
+  year: number;
+  semester: 1 | 2;
+  courseCount: number;
+};
+
+/** Returns all (year, semester) pairs that have at least one course in the DB. */
+export function getAvailableTerms(): AvailableTerm[] {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT year, semester, COUNT(*) AS course_count
+         FROM courses
+        GROUP BY year, semester
+        ORDER BY year DESC, semester DESC`,
+    )
+    .all() as Array<{ year: number; semester: number; course_count: number }>;
+  return rows.map((r) => ({
+    year: r.year,
+    semester: r.semester as 1 | 2,
+    courseCount: r.course_count,
+  }));
+}
+
+export type TermFreshness = {
+  year: number;
+  semester: 1 | 2;
+  courseCount: number;
+  lastScrapedAt: string | null;   // ISO8601 UTC of the most recent scrape_runs row
+  status: "fresh" | "stale" | "missing";
+};
+
+/**
+ * Return freshness metadata for a given term.
+ * - missing: no courses at all
+ * - stale:   has courses, but last scrape was >7 days ago (or no scrape_runs record)
+ * - fresh:   has courses and last scrape was ≤7 days ago
+ */
+export function getTermDataFreshness(year: number, semester: 1 | 2): TermFreshness {
+  const db = getDb();
+  const courseCount = (
+    db
+      .prepare(`SELECT COUNT(*) AS n FROM courses WHERE year = ? AND semester = ?`)
+      .get(year, semester) as { n: number }
+  ).n;
+
+  if (courseCount === 0) {
+    return { year, semester: semester as 1 | 2, courseCount: 0, lastScrapedAt: null, status: "missing" };
+  }
+
+  // Use the most recent scraped_at from scrape_runs for this term
+  let lastScrapedAt: string | null = null;
+  try {
+    const runRow = db
+      .prepare(
+        `SELECT scraped_at FROM scrape_runs
+          WHERE year = ? AND semester = ?
+          ORDER BY scraped_at DESC LIMIT 1`,
+      )
+      .get(year, semester) as { scraped_at: string } | undefined;
+    lastScrapedAt = runRow?.scraped_at ?? null;
+  } catch {
+    // scrape_runs may be unavailable in tests; fall back to courses.scraped_at
+  }
+
+  if (!lastScrapedAt) {
+    // Fall back: most recent scraped_at among courses
+    const courseRow = db
+      .prepare(
+        `SELECT scraped_at FROM courses
+          WHERE year = ? AND semester = ?
+          ORDER BY scraped_at DESC LIMIT 1`,
+      )
+      .get(year, semester) as { scraped_at: string } | undefined;
+    lastScrapedAt = courseRow?.scraped_at ?? null;
+  }
+
+  let status: "fresh" | "stale" = "fresh";
+  if (lastScrapedAt) {
+    const ageDays =
+      (Date.now() - new Date(lastScrapedAt).getTime()) / (1000 * 60 * 60 * 24);
+    if (ageDays > 7) status = "stale";
+  } else {
+    status = "stale"; // has courses but no timestamp — treat as stale
+  }
+
+  return { year, semester: semester as 1 | 2, courseCount, lastScrapedAt, status };
+}

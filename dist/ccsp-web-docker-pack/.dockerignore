@@ -1,0 +1,30 @@
+.git
+.gitignore
+.DS_Store
+
+# Node build output / dependencies
+node_modules/
+web/node_modules/
+web/.next/
+web/out/
+web/*.tsbuildinfo
+web/.env*
+
+# Python local state
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+importer/.venv/
+importer/.pytest_cache/
+importer/.mypy_cache/
+importer/.ruff_cache/
+
+# Local runtime data. A deploy seed can be placed at docker/seed/ccsp.sqlite.
+data/
+
+# Generated deploy packs
+dist/
+*.tar.gz
+*.zip
